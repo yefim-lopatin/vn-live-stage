@@ -7,7 +7,7 @@
 В разделе **Add-on Modules → Install Module** вставьте ссылку:
 
 ```text
-https://github.com/yefim-lopatin/vn-live-stage/releases/latest/download/module.json
+https://raw.githubusercontent.com/yefim-lopatin/vn-live-stage/main/module.json
 ```
 
 После установки активируйте `VN Live Stage` в настройках нужного мира. Открыть интерфейс можно из консоли или макроса:
