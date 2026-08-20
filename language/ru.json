@@ -1,0 +1,20 @@
+{
+  "VNLiveStage": {
+    "title": "VN Live Stage",
+    "open": "Открыть сцену",
+    "speak": "Говорю",
+    "stopSpeaking": "Перестать говорить",
+    "save": "Сохранить сцену",
+    "load": "Загрузить",
+    "undo": "Отменить",
+    "request": "Заявка",
+    "requestPlaceholder": "Что должен изменить GM?",
+    "sendRequest": "Отправить заявку",
+    "noPortraits": "На сцене пока нет портретов.",
+    "noRequests": "Новых заявок нет.",
+    "gmOnly": "Доступно только GM",
+    "conflict": "Состояние сцены устарело. Получен свежий snapshot.",
+    "saved": "Сцена сохранена",
+    "requestSent": "Заявка отправлена"
+  }
+}

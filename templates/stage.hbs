@@ -1,0 +1,75 @@
+<div class="vn-stage-shell" style="--vn-background: url('{{state.scene.background}}');">
+  <section class="vn-stage-main">
+    <header class="vn-stage-header">
+      <div>
+        <h1>{{state.scene.name}}</h1>
+        <p>{{state.scene.time}}{{#if state.scene.weather}} · {{state.scene.weather}}{{/if}}</p>
+      </div>
+      <div class="vn-stage-actions">
+        {{#if isGM}}
+          <button type="button" data-action="save"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
+          <button type="button" data-action="undo"><i class="fa-solid fa-rotate-left"></i> Отменить</button>
+          <button type="button" data-action="redo"><i class="fa-solid fa-rotate-right"></i> Повторить</button>
+        {{/if}}
+      </div>
+    </header>
+
+    <div class="vn-portraits" aria-live="polite">
+      {{#if portraits.length}}
+        {{#each portraits}}
+          <figure class="vn-portrait {{#if speaking}}is-speaking{{/if}} {{#if dimmed}}is-dimmed{{/if}} {{#if overflow}}is-overflow{{/if}}">
+            <img src="{{image}}" alt="{{name}}" loading="lazy">
+            <figcaption>{{name}}</figcaption>
+            {{#if ../isGM}}<button type="button" data-action="remove-portrait" data-portrait-id="{{id}}" title="Убрать"><i class="fa-solid fa-xmark"></i></button>{{/if}}
+          </figure>
+        {{/each}}
+      {{else}}
+        <p class="vn-empty">Портреты появятся здесь после добавления GM или участия игрока.</p>
+      {{/if}}
+    </div>
+
+    <div class="vn-stage-footer">
+      {{#if isSpeaking}}
+        <button type="button" class="vn-speak-button is-active" data-action="stop-speaking"><i class="fa-solid fa-microphone-slash"></i> Перестать говорить</button>
+      {{else}}
+        <button type="button" class="vn-speak-button" data-action="speak"><i class="fa-solid fa-microphone"></i> Нажмите и удерживайте, чтобы говорить</button>
+      {{/if}}
+      <div class="vn-request-box">
+        <input name="request" type="text" placeholder="Что должен изменить GM?" maxlength="500">
+        <button type="button" data-action="request">Заявка</button>
+      </div>
+    </div>
+
+    {{#if isGM}}
+      <div class="vn-gm-tools">
+        <label>Портрет <input name="portrait-name" type="text" placeholder="Имя"></label>
+        <label>Изображение <input name="portrait-image" type="text" placeholder="путь или URL"></label>
+        <button type="button" data-action="add-portrait">Добавить</button>
+        <label>Фон <input name="background" type="text" placeholder="путь или URL"></label>
+        <button type="button" data-action="set-background">Применить фон</button>
+        <label>ID сцены <input name="scene-id" type="text" placeholder="JournalEntry flag id"></label>
+        <button type="button" data-action="load-scene">Загрузить сцену</button>
+      </div>
+    {{/if}}
+  </section>
+
+  <aside class="vn-stage-sidebar">
+    <h2>Заявки</h2>
+    {{#if requests.length}}
+      {{#each requests}}
+        <article class="vn-request {{status}}">
+          <p>{{text}}</p>
+          <small>{{status}}</small>
+          {{#if ../isGM}}
+            {{#if pending}}
+              <button type="button" data-action="resolve-request" data-request-id="{{id}}" data-status="resolved">Принять</button>
+              <button type="button" data-action="resolve-request" data-request-id="{{id}}" data-status="rejected">Отклонить</button>
+            {{/if}}
+          {{/if}}
+        </article>
+      {{/each}}
+    {{else}}
+      <p class="vn-empty">Новых заявок нет.</p>
+    {{/if}}
+  </aside>
+</div>

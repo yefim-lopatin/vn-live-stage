@@ -1,0 +1,32 @@
+{
+  "id": "vn-live-stage",
+  "title": "VN Live Stage",
+  "description": "GM-авторитетная визуальная сцена для живого ведения диалогов в Foundry VTT.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.366"
+  },
+  "authors": [
+    {
+      "name": "Yefim Lopatin"
+    }
+  ],
+  "url": "https://github.com/yefim-lopatin/vn-live-stage",
+  "manifest": "https://github.com/yefim-lopatin/vn-live-stage/releases/latest/download/module.json",
+  "download": "https://github.com/yefim-lopatin/vn-live-stage/releases/latest/download/vn-live-stage.zip",
+  "esmodules": [
+    "scripts/module.js"
+  ],
+  "styles": [
+    "styles/module.css"
+  ],
+  "languages": [
+    {
+      "lang": "ru",
+      "name": "Русский",
+      "path": "language/ru.json"
+    }
+  ],
+  "socket": true
+}
