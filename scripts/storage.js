@@ -12,10 +12,18 @@ export async function readLiveState() {
   if (!stored) return createInitialState();
   const initial = createInitialState();
   const value = clone(stored);
+  const phase = ["preparing", "live"].includes(value.stage?.phase)
+    ? value.stage.phase
+    : (value.stage?.active ? "live" : "inactive");
   return {
     ...initial,
     ...value,
-    stage: { ...initial.stage, ...(value.stage ?? {}) },
+    stage: {
+      ...initial.stage,
+      ...(value.stage ?? {}),
+      phase,
+      active: phase === "live"
+    },
     scene: createSceneDefinition(value.scene)
   };
 }

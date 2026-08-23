@@ -1,13 +1,23 @@
 <div class="vn-director">
-  <header class="vn-director-hero {{#if active}}is-live{{/if}}">
+  <header class="vn-director-hero {{#if isPreparing}}is-preparing{{/if}} {{#if isLive}}is-live{{/if}}">
     <div>
       <span class="vn-director-eyebrow">РЕЖИМ СЦЕНЫ</span>
-      <h1>{{#if active}}Сцена идёт{{else}}Сцена не активна{{/if}}</h1>
+      {{#if isInactive}}<h1>Сцена выключена</h1>{{/if}}
+      {{#if isPreparing}}<h1>Приватная подготовка</h1>{{/if}}
+      {{#if isLive}}<h1>Сцена показана игрокам</h1>{{/if}}
       <p>{{state.scene.name}}</p>
     </div>
-    <button type="button" class="vn-director-live" data-action="toggle-stage">
-      {{#if active}}<i class="fa-solid fa-stop"></i> Завершить сцену{{else}}<i class="fa-solid fa-play"></i> Начать сцену{{/if}}
-    </button>
+    <div class="vn-director-state-actions">
+      {{#if isInactive}}<button type="button" class="vn-director-live" data-action="prepare-stage"><i class="fa-solid fa-hammer"></i> Подготовить сцену</button>{{/if}}
+      {{#if isPreparing}}
+        <button type="button" class="vn-director-live" data-action="publish-stage"><i class="fa-solid fa-tower-broadcast"></i> Показать игрокам</button>
+        <button type="button" data-action="end-stage"><i class="fa-solid fa-xmark"></i> Закрыть</button>
+      {{/if}}
+      {{#if isLive}}
+        <button type="button" class="vn-director-live" data-action="return-to-preparation"><i class="fa-solid fa-eye-slash"></i> Вернуть в подготовку</button>
+        <button type="button" data-action="end-stage"><i class="fa-solid fa-stop"></i> Завершить</button>
+      {{/if}}
+    </div>
   </header>
 
   <section class="vn-director-section">
@@ -56,13 +66,11 @@
     </div>
 
     {{#if hasPortraits}}
-      <p class="vn-director-help">Нажмите <i class="fa-solid fa-comment-dots"></i>, чтобы выбрать портрет, который будет говорить при удержании кнопки GM.</p>
       <div class="vn-director-cast">
         {{#each portraits}}
-          <article class="vn-director-cast-item {{#if isGmSpeaker}}is-gm-speaker{{/if}}">
+          <article class="vn-director-cast-item">
             {{#if image}}<img src="{{image}}" alt="">{{else}}<div class="vn-director-avatar"><i class="fa-solid fa-user"></i></div>{{/if}}
             <div><strong>{{name}}</strong><small>{{#if isLeft}}Слева · игрок{{else}}Справа · NPC{{/if}}{{#if flipped}} · отражён{{/if}}</small></div>
-            <button type="button" data-action="select-speaker" data-portrait-id="{{id}}" data-selected="{{isGmSpeaker}}" title="Выбрать говорящего GM"><i class="fa-solid fa-comment-dots"></i></button>
             <button type="button" data-action="flip-portrait" data-portrait-id="{{id}}" data-flipped="{{flipped}}" title="Отразить по горизонтали"><i class="fa-solid fa-arrows-left-right"></i></button>
             <button type="button" data-action="switch-side" data-portrait-id="{{id}}" data-side="{{#if isLeft}}right{{else}}left{{/if}}" title="Перенести на другую сторону"><i class="fa-solid fa-arrow-right-arrow-left"></i></button>
             <button type="button" data-action="remove-portrait" data-portrait-id="{{id}}" title="Убрать"><i class="fa-solid fa-trash"></i></button>

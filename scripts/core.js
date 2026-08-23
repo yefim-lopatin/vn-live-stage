@@ -6,7 +6,9 @@ export const MAX_SLOTS = 6;
 export const SPEECH_TIMEOUT_MS = 9000;
 
 export const COMMANDS = Object.freeze([
-  "activateStage",
+  "prepareStage",
+  "publishStage",
+  "returnToPreparation",
   "deactivateStage",
   "newScene",
   "addPortrait",
@@ -15,7 +17,6 @@ export const COMMANDS = Object.freeze([
   "movePortrait",
   "updatePortrait",
   "setSceneDetails",
-  "setGmSpeaker",
   "setLocation",
   "setBackground",
   "setEnvironment",
@@ -74,10 +75,10 @@ export function createInitialState() {
   return {
     revision: 0,
     stage: {
+      phase: "inactive",
       active: false,
       activatedAt: null,
-      activatedBy: null,
-      gmSpeakerPortraitId: null
+      activatedBy: null
     },
     scene: createSceneDefinition(),
     overflow: [],
@@ -133,7 +134,6 @@ export function applySceneCommand(inputState, command) {
       state.scene = createSceneDefinition({ name: payload.name || "Новая сцена" });
       state.overflow = [];
       state.speaking = {};
-      state.stage.gmSpeakerPortraitId = null;
       break;
     case "addPortrait": {
       if (state.scene.portraits.length >= MAX_SLOTS) throw new Error("Все основные слоты заняты");
@@ -177,7 +177,6 @@ export function applySceneCommand(inputState, command) {
       if (state.scene.portraits.length === before.scene.portraits.length && state.overflow.length === before.overflow.length) {
         throw new Error("Портрет не найден");
       }
-      if (state.stage.gmSpeakerPortraitId === payload.portraitId) state.stage.gmSpeakerPortraitId = null;
       break;
     }
     case "movePortrait": {
@@ -298,4 +297,23 @@ export function allPortraits(state) {
 
 export function speakingIds(state) {
   return new Set(Object.values(state.speaking).map((item) => item.portraitId));
+}
+
+export function getStagePhase(stage = {}) {
+  if (["preparing", "live"].includes(stage.phase)) return stage.phase;
+  return stage.active ? "live" : "inactive";
+}
+
+export function shouldDisplayStage(stage, isGM = false) {
+  const phase = getStagePhase(stage);
+  return phase === "live" || (isGM && phase === "preparing");
+}
+
+export function overlayStructureSignature(state, { hideUi = false } = {}) {
+  return JSON.stringify({
+    scene: state.scene,
+    overflow: state.overflow,
+    phase: getStagePhase(state.stage),
+    hideUi: Boolean(hideUi)
+  });
 }

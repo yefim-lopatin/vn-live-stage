@@ -2,7 +2,7 @@
   "id": "vn-live-stage",
   "title": "VN Live Stage",
   "description": "GM-авторитетная визуальная сцена для живого ведения диалогов в Foundry VTT.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "compatibility": {
     "minimum": "14",
     "verified": "14.366"

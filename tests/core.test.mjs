@@ -6,7 +6,9 @@ import {
   applyTransientCommand,
   createCommand,
   createInitialState,
-  expireSpeaking
+  expireSpeaking,
+  overlayStructureSignature,
+  shouldDisplayStage
 } from "../scripts/core.js";
 
 test("scene commands change only the scene and increment revision", () => {
@@ -26,8 +28,8 @@ test("scene commands change only the scene and increment revision", () => {
 
 test("stage starts inactive and portrait side can be changed", () => {
   const initial = createInitialState();
+  assert.equal(initial.stage.phase, "inactive");
   assert.equal(initial.stage.active, false);
-  assert.equal(initial.stage.gmSpeakerPortraitId, null);
 
   const added = applySceneCommand(initial, createCommand("addPortrait", {
     name: "NPC",
@@ -64,21 +66,21 @@ test("portrait batches add groups without duplicates and refresh avatar images",
   assert.equal(state.scene.portraits.find((portrait) => portrait.id === "user-a").image, "a-new.webp");
 });
 
-test("new scene clears composition and selected GM speaker", () => {
+test("new scene clears composition without changing stage phase", () => {
   let state = createInitialState();
   state = applySceneCommand(state, createCommand("addPortrait", {
     id: "npc",
     name: "NPC",
     image: "npc.webp"
   }, { userId: "gm", revision: 0 })).state;
-  state.stage.gmSpeakerPortraitId = "npc";
+  state.stage.phase = "preparing";
   state = applySceneCommand(state, createCommand("newScene", {
     name: "Поле"
   }, { userId: "gm", revision: 1 })).state;
 
   assert.equal(state.scene.name, "Поле");
   assert.equal(state.scene.portraits.length, 0);
-  assert.equal(state.stage.gmSpeakerPortraitId, null);
+  assert.equal(state.stage.phase, "preparing");
 });
 
 test("all main slots are bounded and overflow is transient", () => {
@@ -113,4 +115,31 @@ test("multiple speaking users can coexist and heartbeat expiry clears stale stat
     bob: state.speaking.bob
   } }, 1000).speaking).includes("alice"), false);
   assert.equal(Object.keys(expireSpeaking(state, 0).speaking).length, 0);
+});
+
+test("preparation is visible only to GM and live stage is visible to everyone", () => {
+  assert.equal(shouldDisplayStage({ phase: "inactive" }, true), false);
+  assert.equal(shouldDisplayStage({ phase: "preparing" }, false), false);
+  assert.equal(shouldDisplayStage({ phase: "preparing" }, true), true);
+  assert.equal(shouldDisplayStage({ phase: "live" }, false), true);
+});
+
+test("speech changes do not change the overlay structure signature", () => {
+  let state = createInitialState();
+  state.stage.phase = "live";
+  state.stage.active = true;
+  state = applySceneCommand(state, createCommand("addPortrait", {
+    id: "speaker",
+    profileId: "speaker",
+    name: "Говорящий",
+    image: "speaker.webp",
+    side: "left"
+  }, { userId: "gm", revision: 0 })).state;
+  const before = overlayStructureSignature(state, { hideUi: true });
+  const speaking = applyTransientCommand(state, createCommand("speechStart", {}, { userId: "player" }), {
+    userId: "player",
+    portrait: state.scene.portraits[0]
+  });
+
+  assert.equal(overlayStructureSignature(speaking, { hideUi: true }), before);
 });

@@ -40,6 +40,10 @@
   box-shadow: inset 4px 0 0 var(--vn-live);
 }
 
+.vn-director-hero.is-preparing {
+  box-shadow: inset 4px 0 0 var(--vn-accent);
+}
+
 .vn-director-eyebrow {
   color: var(--vn-accent);
   font-size: .7rem;
@@ -77,6 +81,18 @@
   padding: 0 16px;
   font-weight: 750;
   background: #4b3b27 !important;
+}
+
+.vn-director-state-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.vn-director-state-actions > button {
+  padding: 0 14px;
 }
 
 .is-live .vn-director-live {
@@ -209,7 +225,7 @@
 
 .vn-director-cast-item {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) repeat(4, 32px);
+  grid-template-columns: 42px minmax(0, 1fr) repeat(3, 32px);
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -257,16 +273,6 @@
 .vn-director-cast-item > button {
   min-height: 30px;
   height: 30px;
-}
-
-.vn-director-cast-item.is-gm-speaker {
-  border-color: rgba(214, 173, 104, .68);
-  background: #30291f;
-}
-
-.vn-director-cast-item.is-gm-speaker [data-action="select-speaker"] {
-  color: #1a140d;
-  background: var(--vn-accent);
 }
 
 .vn-director-help {
@@ -550,6 +556,43 @@
   backdrop-filter: blur(6px);
 }
 
+.vn-cinematic-overlay.is-gm-preview .vn-cinematic-portrait figcaption {
+  bottom: 7vh;
+}
+
+.vn-cinematic-portrait-speak {
+  position: absolute;
+  left: 50%;
+  bottom: 1.2vh;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: min(90%, 180px);
+  min-height: 38px;
+  padding: 0 12px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(229, 193, 128, .62);
+  border-radius: 999px;
+  color: #fff7ea;
+  font-weight: 700;
+  background: rgba(40, 32, 25, .9);
+  box-shadow: 0 7px 20px rgba(0, 0, 0, .42);
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.vn-cinematic-portrait-speak:hover {
+  background: rgba(69, 53, 36, .96);
+}
+
+.vn-cinematic-portrait-speak.is-active {
+  border-color: #e5c487;
+  background: #654234;
+}
+
 .vn-cinematic-portrait.is-speaking {
   z-index: 3;
 }
@@ -666,6 +709,9 @@ body.vn-live-stage-hide-ui #logo {
   .vn-cinematic-side { top: 6vh; bottom: 6vh; width: 50vw; padding: 0 3px; gap: 3px; }
   .vn-cinematic-portrait { width: 100%; height: 80vh; }
   .vn-cinematic-portrait figcaption { bottom: 2vh; padding: 5px 9px; }
+  .vn-cinematic-overlay.is-gm-preview .vn-cinematic-portrait figcaption { bottom: 7vh; }
+  .vn-cinematic-portrait-speak { width: 92%; padding: 0 7px; }
+  .vn-cinematic-portrait-speak span { display: none; }
   .vn-cinematic-speak { bottom: .7vh; min-width: 210px; min-height: 40px; }
   .vn-cinematic-gm-actions span { display: none; }
 }

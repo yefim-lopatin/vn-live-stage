@@ -21,6 +21,7 @@ export class LiveStageSession {
     this.listeners = new Set();
     this.cleanup = [];
     this.speaking = false;
+    this.speechStarting = false;
     this.speechTimer = null;
   }
 
@@ -69,11 +70,24 @@ export class LiveStageSession {
     return this.getState();
   }
 
-  async startSpeaking() {
+  async startSpeaking(portraitId = null) {
     if (this.speaking) return this.getState();
-    if (!this.state.stage?.active) throw new Error("Режим сцены не активен");
-    const result = await this.dispatch({ type: "speechStart", payload: {} });
+    if (!this._speechEnabledForCurrentUser()) throw new Error("Режим сцены не активен");
     this.speaking = true;
+    this.speechStarting = true;
+    let result;
+    try {
+      result = await this.dispatch({ type: "speechStart", payload: { portraitId } });
+    } catch (error) {
+      this.speaking = false;
+      throw error;
+    } finally {
+      this.speechStarting = false;
+    }
+    if (!this.speaking) {
+      await this.dispatch({ type: "speechStop", payload: {} });
+      return this.getState();
+    }
     this.speechTimer = setInterval(() => {
       if (this.speaking) this.dispatch({ type: "speechHeartbeat", payload: {} }).catch(() => {});
     }, 3000);
@@ -85,11 +99,24 @@ export class LiveStageSession {
     this.speaking = false;
     clearInterval(this.speechTimer);
     this.speechTimer = null;
+    if (this.speechStarting) return this.getState();
     return this.dispatch({ type: "speechStop", payload: {} });
   }
 
+  async prepareStage() {
+    return this.dispatch({ type: "prepareStage", payload: {} });
+  }
+
+  async publishStage() {
+    return this.dispatch({ type: "publishStage", payload: {} });
+  }
+
+  async returnToPreparation() {
+    return this.dispatch({ type: "returnToPreparation", payload: {} });
+  }
+
   async activateStage() {
-    return this.dispatch({ type: "activateStage", payload: {} });
+    return this.publishStage();
   }
 
   async deactivateStage() {
@@ -97,7 +124,10 @@ export class LiveStageSession {
   }
 
   async toggleStage() {
-    return this.state.stage?.active ? this.deactivateStage() : this.activateStage();
+    const phase = this.state.stage?.phase ?? "inactive";
+    if (phase === "inactive") return this.prepareStage();
+    if (phase === "live") return this.returnToPreparation();
+    return this.deactivateStage();
   }
 
   async newScene(name = "Новая сцена") {
@@ -121,12 +151,8 @@ export class LiveStageSession {
     return this.addPortraits(portraits);
   }
 
-  async selectGmSpeaker(portraitId) {
-    return this.dispatch({ type: "setGmSpeaker", payload: { portraitId } });
-  }
-
-  canCurrentUserSpeak() {
-    return Boolean(this._portraitFor(game.user.id));
+  canCurrentUserSpeak(portraitId = null) {
+    return Boolean(this._portraitFor(game.user.id, portraitId));
   }
 
   async saveScene(options = {}) {
@@ -152,16 +178,41 @@ export class LiveStageSession {
     try {
       const user = game.users.get(command.userId);
       this._authorize(command, user);
-      if (command.type === "activateStage") {
+      if (command.type === "prepareStage") {
+        if ((this.state.stage?.phase ?? "inactive") !== "inactive") throw new Error("Сцена уже подготовлена или показана");
         this.state.stage = {
           ...this.state.stage,
+          phase: "preparing",
+          active: false,
+          activatedAt: null,
+          activatedBy: null
+        };
+        this.state.speaking = {};
+        this._resetLocalSpeaking();
+      } else if (command.type === "publishStage") {
+        if ((this.state.stage?.phase ?? "inactive") !== "preparing") throw new Error("Сначала подготовьте сцену");
+        this.state.stage = {
+          ...this.state.stage,
+          phase: "live",
           active: true,
           activatedAt: Date.now(),
           activatedBy: command.userId
         };
+      } else if (command.type === "returnToPreparation") {
+        if ((this.state.stage?.phase ?? "inactive") !== "live") throw new Error("Сцена ещё не показана игрокам");
+        this.state.stage = {
+          ...this.state.stage,
+          phase: "preparing",
+          active: false,
+          activatedAt: null,
+          activatedBy: null
+        };
+        this.state.speaking = {};
+        this._resetLocalSpeaking();
       } else if (command.type === "deactivateStage") {
         this.state.stage = {
           ...this.state.stage,
+          phase: "inactive",
           active: false,
           activatedAt: null,
           activatedBy: null
@@ -169,15 +220,11 @@ export class LiveStageSession {
         this.state.speaking = {};
         this.state.overflow = [];
         this._resetLocalSpeaking();
-      } else if (command.type === "setGmSpeaker") {
-        const portraitId = command.payload?.portraitId ?? null;
-        if (portraitId && !this.state.scene.portraits.some((portrait) => portrait.id === portraitId)) {
-          throw new Error("Выбранный портрет не найден");
-        }
-        this.state.stage.gmSpeakerPortraitId = portraitId;
       } else if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) {
-        if (command.type !== "speechStop" && !this.state.stage?.active) throw new Error("Режим сцены не активен");
-        const portrait = this._portraitFor(command.userId);
+        const phase = this.state.stage?.phase ?? "inactive";
+        const canSpeak = phase === "live" || (phase === "preparing" && user.isGM);
+        if (command.type !== "speechStop" && !canSpeak) throw new Error("Режим сцены не активен");
+        const portrait = this._portraitFor(command.userId, command.payload?.portraitId);
         if (command.type === "speechStart" && !portrait) throw new Error("У игрока нет персонажа для портрета");
         this.state = applyTransientCommand(this.state, command, { userId: command.userId, portrait });
       } else if (command.type === "saveScene") {
@@ -186,7 +233,6 @@ export class LiveStageSession {
         const scene = getScene(command.payload.sceneId);
         if (!scene) throw new Error("Сохранённая сцена не найдена");
         this.state.scene = createSceneDefinition(scene);
-        this.state.stage.gmSpeakerPortraitId = null;
         this.state.speaking = {};
         this.state.revision += 1;
         this.state.history = [];
@@ -217,7 +263,7 @@ export class LiveStageSession {
     if (!user) throw new Error("Неизвестный пользователь");
     const policy = normalizePolicy(game.settings.get(MODULE_ID, "permissionPolicy") ?? DEFAULT_POLICY);
     if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) return;
-    if (["activateStage", "deactivateStage", "setGmSpeaker"].includes(command.type) && user.isGM) return;
+    if (["prepareStage", "publishStage", "returnToPreparation", "deactivateStage"].includes(command.type) && user.isGM) return;
     if (command.type === "createRequest" && user.active !== false) return;
     if (["resolveRequest"].includes(command.type) && can(user, "requestReview", policy)) return;
     if (["saveScene"].includes(command.type) && can(user, "saveScene", policy)) return;
@@ -227,19 +273,17 @@ export class LiveStageSession {
     throw new Error("Недостаточно прав для этой команды");
   }
 
-  _portraitFor(userId) {
+  _portraitFor(userId, requestedPortraitId = null) {
     const active = this.state.speaking[userId];
     const existing = active && [...this.state.scene.portraits, ...this.state.overflow].find((item) => item.id === active.portraitId);
     if (existing) return existing;
     const user = game.users.get(userId);
     if (user?.isGM) {
-      const portraitId = this.state.stage?.gmSpeakerPortraitId;
-      return this.state.scene.portraits.find((portrait) => portrait.id === portraitId) ?? null;
+      return this.state.scene.portraits.find((portrait) => portrait.id === requestedPortraitId) ?? null;
     }
     const profileId = `user-${userId}`;
     const known = [...this.state.scene.portraits, ...this.state.overflow].find((item) => item.profileId === profileId);
-    if (known) return known;
-    return getSystemAdapter().getPortrait(user);
+    return known ?? null;
   }
 
   _refreshPortraits(portraits = []) {
@@ -261,8 +305,14 @@ export class LiveStageSession {
 
   _resetLocalSpeaking() {
     this.speaking = false;
+    this.speechStarting = false;
     clearInterval(this.speechTimer);
     this.speechTimer = null;
+  }
+
+  _speechEnabledForCurrentUser() {
+    const phase = this.state.stage?.phase ?? "inactive";
+    return phase === "live" || (phase === "preparing" && game.user.isGM);
   }
 
   _undo() {
@@ -294,7 +344,7 @@ export class LiveStageSession {
     if (message.kind === "snapshot") {
       if (!game.user.isGM && message.state) {
         this.state = clone(message.state);
-        if (!this.state.stage?.active || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
+        if (!this._speechEnabledForCurrentUser() || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
         this._emit();
       }
       return;
@@ -316,7 +366,7 @@ export class LiveStageSession {
     const response = await this._dispatchSocket({ kind: "sync", userId: game.user.id });
     if (response?.state) {
       this.state = clone(response.state);
-      if (!this.state.stage?.active || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
+      if (!this._speechEnabledForCurrentUser() || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
     }
   }
 

@@ -25,7 +25,7 @@ function openDirector() {
   return directorApplication;
 }
 
-async function toggleGlobalStage() {
+async function openPreparation() {
   if (!session) {
     ui.notifications?.warn?.(game.i18n.localize("VNLiveStage.notifications.notReady"));
     return null;
@@ -34,7 +34,8 @@ async function toggleGlobalStage() {
     ui.notifications?.warn?.(game.i18n.localize("VNLiveStage.gmOnly"));
     return null;
   }
-  return session.toggleStage();
+  if ((session.getState().stage?.phase ?? "inactive") === "inactive") await session.prepareStage();
+  return openDirector();
 }
 
 function registerSettings() {
@@ -81,7 +82,7 @@ function registerKeybindings() {
     editable: [{ key: "KeyV", modifiers: [SHIFT] }],
     onDown: () => {
       if (!game.user.isGM) return false;
-      toggleGlobalStage().catch((error) => ui.notifications?.error?.(error.message));
+      openPreparation().catch((error) => ui.notifications?.error?.(error.message));
       return true;
     }
   });
@@ -113,7 +114,7 @@ function registerSceneControls() {
           title: "VNLiveStage.controls.toggleStage.title",
           icon: "fa-solid fa-clapperboard",
           button: true,
-          onChange: () => toggleGlobalStage().catch((error) => ui.notifications?.error?.(error.message))
+          onChange: () => openPreparation().catch((error) => ui.notifications?.error?.(error.message))
         }
       }
     };
@@ -126,15 +127,17 @@ function exposeApi() {
     open: openDirector,
     openDirector,
     close: () => directorApplication?.close(),
-    activate: () => session.activateStage(),
+    prepare: () => session.prepareStage(),
+    activate: () => session.publishStage(),
+    publish: () => session.publishStage(),
+    returnToPreparation: () => session.returnToPreparation(),
     deactivate: () => session.deactivateStage(),
-    toggle: toggleGlobalStage,
+    toggle: () => session.toggleStage(),
     newScene: (name) => session.newScene(name),
     addPlayerAvatars: () => session.addPlayerAvatars(),
-    selectGmSpeaker: (portraitId) => session.selectGmSpeaker(portraitId),
     getState: () => session?.getState() ?? null,
     dispatch: (command) => session.dispatch(command),
-    startSpeaking: () => session.startSpeaking(),
+    startSpeaking: (portraitId) => session.startSpeaking(portraitId),
     stopSpeaking: () => session.stopSpeaking(),
     saveScene: (options) => session.saveScene(options),
     loadScene: (sceneId) => session.loadScene(sceneId),

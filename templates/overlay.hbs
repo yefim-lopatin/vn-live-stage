@@ -1,4 +1,4 @@
-<div id="vn-live-stage-overlay" class="vn-cinematic-overlay" role="region" aria-label="Режим сцены">
+<div id="vn-live-stage-overlay" class="vn-cinematic-overlay {{#if isGM}}is-gm-preview{{/if}}" role="region" aria-label="Режим сцены">
   <div class="vn-cinematic-background" {{#if background}}style="background-image: url('{{background}}')"{{/if}}></div>
   <div class="vn-cinematic-vignette"></div>
   <div class="vn-cinematic-bar vn-cinematic-bar-top"></div>
@@ -11,29 +11,35 @@
 
   <section class="vn-cinematic-side vn-cinematic-left" aria-label="Персонажи игроков">
     {{#each leftPortraits}}
-      <figure class="vn-cinematic-portrait {{#if speaking}}is-speaking{{/if}} {{#if flipped}}is-flipped{{/if}} {{#if overflow}}is-overflow{{/if}}" style="--vn-slot: {{slot}}">
+      <figure class="vn-cinematic-portrait {{#if speaking}}is-speaking{{/if}} {{#if flipped}}is-flipped{{/if}} {{#if overflow}}is-overflow{{/if}}" data-portrait-id="{{id}}" style="--vn-slot: {{slot}}">
         {{#if hasImage}}<img src="{{image}}" alt="{{name}}">{{else}}<div class="vn-cinematic-placeholder"><i class="fa-solid fa-user"></i></div>{{/if}}
         <figcaption>{{name}}</figcaption>
+        {{#if ../isGM}}<button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Говорить</span></button>{{/if}}
       </figure>
     {{/each}}
   </section>
 
   <section class="vn-cinematic-side vn-cinematic-right" aria-label="Неигровые персонажи">
     {{#each rightPortraits}}
-      <figure class="vn-cinematic-portrait {{#if speaking}}is-speaking{{/if}} {{#if flipped}}is-flipped{{/if}} {{#if overflow}}is-overflow{{/if}}" style="--vn-slot: {{slot}}">
+      <figure class="vn-cinematic-portrait {{#if speaking}}is-speaking{{/if}} {{#if flipped}}is-flipped{{/if}} {{#if overflow}}is-overflow{{/if}}" data-portrait-id="{{id}}" style="--vn-slot: {{slot}}">
         {{#if hasImage}}<img src="{{image}}" alt="{{name}}">{{else}}<div class="vn-cinematic-placeholder"><i class="fa-solid fa-user"></i></div>{{/if}}
         <figcaption>{{name}}</figcaption>
+        {{#if ../isGM}}<button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Говорить</span></button>{{/if}}
       </figure>
     {{/each}}
   </section>
 
-  <button type="button" class="vn-cinematic-speak {{#if isSpeaking}}is-active{{/if}}" data-action="speak" {{#unless canSpeak}}disabled{{/unless}}>
-    <i class="fa-solid fa-comment-dots"></i>
-    <span>{{#if canSpeak}}{{#if isSpeaking}}Говорю…{{else}}Удерживайте, чтобы говорить{{/if}}{{else}}{{#if isGM}}Выберите портрет в пульте{{else}}Персонаж не назначен{{/if}}{{/if}}</span>
-  </button>
+  {{#unless isGM}}
+    <button type="button" class="vn-cinematic-speak {{#if isSpeaking}}is-active{{/if}}" data-action="speak" {{#unless canSpeak}}disabled{{/unless}}>
+      <i class="fa-solid fa-comment-dots"></i>
+      <span>{{#if canSpeak}}{{#if isSpeaking}}Говорю…{{else}}Удерживайте, чтобы говорить{{/if}}{{else}}Персонаж не добавлен в сцену{{/if}}</span>
+    </button>
+  {{/unless}}
 
   {{#if isGM}}
     <div class="vn-cinematic-gm-actions">
+      {{#if isPreparing}}<button type="button" data-action="publish-stage" title="Показать сцену игрокам"><i class="fa-solid fa-tower-broadcast"></i><span>Показать игрокам</span></button>{{/if}}
+      {{#if isLive}}<button type="button" data-action="return-to-preparation" title="Скрыть сцену от игроков"><i class="fa-solid fa-eye-slash"></i><span>В подготовку</span></button>{{/if}}
       <button type="button" data-action="open-director" title="Открыть пульт"><i class="fa-solid fa-sliders"></i><span>Пульт</span></button>
       <button type="button" data-action="end-stage" title="Завершить сцену"><i class="fa-solid fa-stop"></i><span>Завершить</span></button>
     </div>
