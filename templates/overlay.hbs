@@ -1,5 +1,5 @@
 <div id="vn-live-stage-overlay" class="vn-cinematic-overlay {{#if isGM}}is-gm-preview{{/if}}" role="region" aria-label="Режим сцены">
-  <div class="vn-cinematic-background" {{#if background}}style="background-image: url('{{background}}')"{{/if}}></div>
+  <div class="vn-cinematic-background {{#unless backgroundVisible}}is-hidden{{/unless}}" {{#if background}}style="background-image: url('{{background}}')"{{/if}}></div>
   <div class="vn-cinematic-vignette"></div>
   <div class="vn-cinematic-bar vn-cinematic-bar-top"></div>
   <div class="vn-cinematic-bar vn-cinematic-bar-bottom"></div>
@@ -40,6 +40,7 @@
     <div class="vn-cinematic-gm-actions">
       {{#if isPreparing}}<button type="button" data-action="publish-stage" title="Показать сцену игрокам"><i class="fa-solid fa-tower-broadcast"></i><span>Показать игрокам</span></button>{{/if}}
       {{#if isLive}}<button type="button" data-action="return-to-preparation" title="Скрыть сцену от игроков"><i class="fa-solid fa-eye-slash"></i><span>В подготовку</span></button>{{/if}}
+      {{#if background}}<button type="button" data-action="toggle-background" data-visible="{{backgroundVisible}}" title="{{#if backgroundVisible}}Скрыть фоновую картинку{{else}}Показать фоновую картинку{{/if}}"><i class="fa-solid {{#if backgroundVisible}}fa-eye-slash{{else}}fa-eye{{/if}}"></i><span>{{#if backgroundVisible}}Скрыть фон{{else}}Показать фон{{/if}}</span></button>{{/if}}
       <button type="button" data-action="open-director" title="Открыть пульт"><i class="fa-solid fa-sliders"></i><span>Пульт</span></button>
       <button type="button" data-action="end-stage" title="Завершить сцену"><i class="fa-solid fa-stop"></i><span>Завершить</span></button>
     </div>

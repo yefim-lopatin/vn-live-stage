@@ -210,7 +210,7 @@ export class StageOverlayController {
       hideUi: game.settings.get(MODULE_ID, "hideFoundryUi")
     });
     if (signature === this.signature && this.element?.isConnected) {
-      this._updateSpeechState(state);
+      this._updateDynamicState(state);
       return;
     }
     this.signature = signature;
@@ -225,6 +225,7 @@ export class StageOverlayController {
     const context = {
       state,
       background: state.scene.background,
+      backgroundVisible: Boolean(state.scene.background && state.scene.backgroundVisible),
       leftPortraits: portraits.filter((portrait) => portrait.side !== "right"),
       rightPortraits: portraits.filter((portrait) => portrait.side === "right"),
       isGM: Boolean(game.user.isGM),
@@ -252,7 +253,7 @@ export class StageOverlayController {
     document.body.classList.add("vn-live-stage-active");
     document.body.classList.toggle("vn-live-stage-hide-ui", Boolean(game.settings.get(MODULE_ID, "hideFoundryUi")));
     this._bind();
-    this._updateSpeechState(this.session.getState());
+    this._updateDynamicState(this.session.getState());
   }
 
   _bind() {
@@ -266,6 +267,13 @@ export class StageOverlayController {
     });
     this.element?.querySelector("[data-action='return-to-preparation']")?.addEventListener("click", () => {
       this.session.returnToPreparation().catch(notifyError);
+    });
+    this.element?.querySelector("[data-action='toggle-background']")?.addEventListener("click", () => {
+      const scene = this.session.getState().scene;
+      this.session.dispatch({
+        type: "setBackgroundVisibility",
+        payload: { visible: !scene.backgroundVisible }
+      }).catch(notifyError);
     });
     this.element?.querySelector("[data-action='end-stage']")?.addEventListener("click", () => {
       this.session.deactivateStage().catch(notifyError);
@@ -286,8 +294,19 @@ export class StageOverlayController {
     });
   }
 
-  _updateSpeechState(state) {
+  _updateDynamicState(state) {
     if (!this.element) return;
+    const backgroundVisible = Boolean(state.scene.background && state.scene.backgroundVisible);
+    this.element.querySelector(".vn-cinematic-background")?.classList.toggle("is-hidden", !backgroundVisible);
+    const backgroundButton = this.element.querySelector("[data-action='toggle-background']");
+    if (backgroundButton) {
+      backgroundButton.dataset.visible = String(backgroundVisible);
+      backgroundButton.title = backgroundVisible ? "Скрыть фоновую картинку" : "Показать фоновую картинку";
+      const icon = backgroundButton.querySelector("i");
+      if (icon) icon.className = backgroundVisible ? "fa-solid fa-eye-slash" : "fa-solid fa-eye";
+      const label = backgroundButton.querySelector("span");
+      if (label) label.textContent = backgroundVisible ? "Скрыть фон" : "Показать фон";
+    }
     const activePortraits = speakingIds(state);
     this.element.querySelectorAll("[data-portrait-id]").forEach((element) => {
       const portraitId = element.dataset.portraitId;

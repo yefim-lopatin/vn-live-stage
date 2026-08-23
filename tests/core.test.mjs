@@ -5,6 +5,7 @@ import {
   applySceneCommand,
   applyTransientCommand,
   createCommand,
+  createSceneDefinition,
   createInitialState,
   expireSpeaking,
   overlayStructureSignature,
@@ -142,4 +143,22 @@ test("speech changes do not change the overlay structure signature", () => {
   });
 
   assert.equal(overlayStructureSignature(speaking, { hideUi: true }), before);
+});
+
+test("background is transparent by default and visibility toggles without structural redraw", () => {
+  assert.equal(createSceneDefinition().backgroundVisible, false);
+  assert.equal(createSceneDefinition({ background: "legacy.webp" }).backgroundVisible, true);
+
+  let state = createInitialState();
+  state = applySceneCommand(state, createCommand("setBackground", {
+    background: "tavern.webp"
+  }, { userId: "gm", revision: 0 })).state;
+  assert.equal(state.scene.backgroundVisible, true);
+  const before = overlayStructureSignature(state, { hideUi: true });
+
+  state = applySceneCommand(state, createCommand("setBackgroundVisibility", {
+    visible: false
+  }, { userId: "gm", revision: 1 })).state;
+  assert.equal(state.scene.backgroundVisible, false);
+  assert.equal(overlayStructureSignature(state, { hideUi: true }), before);
 });

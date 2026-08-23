@@ -269,7 +269,7 @@ export class LiveStageSession {
     if (["saveScene"].includes(command.type) && can(user, "saveScene", policy)) return;
     if (["undo", "redo"].includes(command.type) && can(user, "undo", policy)) return;
     if (["loadScene"].includes(command.type) && can(user, "sceneControl", policy)) return;
-    if (["newScene", "addPortrait", "addPortraits", "removePortrait", "movePortrait", "updatePortrait", "setSceneDetails", "setLocation", "setBackground", "setEnvironment"].includes(command.type) && can(user, "sceneControl", policy)) return;
+    if (["newScene", "addPortrait", "addPortraits", "removePortrait", "movePortrait", "updatePortrait", "setSceneDetails", "setLocation", "setBackground", "setBackgroundVisibility", "setEnvironment"].includes(command.type) && can(user, "sceneControl", policy)) return;
     throw new Error("Недостаточно прав для этой команды");
   }
 

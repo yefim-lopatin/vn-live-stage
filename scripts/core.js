@@ -19,6 +19,7 @@ export const COMMANDS = Object.freeze([
   "setSceneDetails",
   "setLocation",
   "setBackground",
+  "setBackgroundVisibility",
   "setEnvironment",
   "createRequest",
   "resolveRequest",
@@ -60,11 +61,15 @@ function normalizePortrait(portrait = {}, index = 0) {
 
 export function createSceneDefinition(input = {}) {
   const portraits = Array.isArray(input.portraits) ? input.portraits : [];
+  const background = input.background ?? null;
   return {
     id: input.id ?? makeId("scene"),
     name: String(input.name ?? "Новая сцена"),
     locationId: input.locationId ?? null,
-    background: input.background ?? null,
+    background,
+    backgroundVisible: input.backgroundVisible === undefined
+      ? Boolean(background)
+      : Boolean(input.backgroundVisible && background),
     time: String(input.time ?? ""),
     weather: String(input.weather ?? ""),
     portraits: portraits.map(normalizePortrait)
@@ -205,6 +210,12 @@ export function applySceneCommand(inputState, command) {
       break;
     case "setBackground":
       state.scene.background = payload.background ?? null;
+      state.scene.backgroundVisible = payload.backgroundVisible === undefined
+        ? Boolean(state.scene.background)
+        : Boolean(payload.backgroundVisible && state.scene.background);
+      break;
+    case "setBackgroundVisibility":
+      state.scene.backgroundVisible = Boolean(payload.visible && state.scene.background);
       break;
     case "setEnvironment":
       state.scene.time = String(payload.time ?? state.scene.time ?? "");
@@ -310,8 +321,9 @@ export function shouldDisplayStage(stage, isGM = false) {
 }
 
 export function overlayStructureSignature(state, { hideUi = false } = {}) {
+  const { backgroundVisible: _backgroundVisible, ...scene } = state.scene;
   return JSON.stringify({
-    scene: state.scene,
+    scene,
     overflow: state.overflow,
     phase: getStagePhase(state.stage),
     hideUi: Boolean(hideUi)
