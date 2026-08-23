@@ -6,14 +6,18 @@ export const MAX_SLOTS = 6;
 export const SPEECH_TIMEOUT_MS = 9000;
 
 export const COMMANDS = Object.freeze([
+  "activateStage",
+  "deactivateStage",
   "addPortrait",
   "removePortrait",
   "movePortrait",
+  "updatePortrait",
   "setLocation",
   "setBackground",
   "setEnvironment",
   "createRequest",
   "resolveRequest",
+  "saveScene",
   "loadScene",
   "undo",
   "redo",
@@ -48,6 +52,7 @@ export function createSceneDefinition(input = {}) {
       name: String(portrait.name ?? "Безымянный персонаж"),
       image: portrait.image ?? "",
       slot: Number.isInteger(portrait.slot) ? portrait.slot : index,
+      side: portrait.side === "left" ? "left" : "right",
       position: portrait.position ?? null,
       hidden: Boolean(portrait.hidden)
     }))
@@ -57,6 +62,11 @@ export function createSceneDefinition(input = {}) {
 export function createInitialState() {
   return {
     revision: 0,
+    stage: {
+      active: false,
+      activatedAt: null,
+      activatedBy: null
+    },
     scene: createSceneDefinition(),
     overflow: [],
     speaking: {},
@@ -116,6 +126,7 @@ export function applySceneCommand(inputState, command) {
         name: String(payload.name ?? "Безымянный персонаж"),
         image: payload.image ?? "",
         slot: Number.isInteger(payload.slot) ? payload.slot : firstFreeSlot(state.scene.portraits),
+        side: payload.side === "left" ? "left" : "right",
         position: payload.position ?? null,
         hidden: Boolean(payload.hidden)
       });
@@ -135,6 +146,13 @@ export function applySceneCommand(inputState, command) {
       const occupied = state.scene.portraits.find((item) => item.slot === payload.slot && item.id !== portrait.id);
       if (occupied) occupied.slot = portrait.slot;
       portrait.slot = payload.slot;
+      break;
+    }
+    case "updatePortrait": {
+      const portrait = requirePortrait(state.scene, payload.portraitId);
+      if (payload.name !== undefined) portrait.name = String(payload.name || "Безымянный персонаж");
+      if (payload.image !== undefined) portrait.image = payload.image ?? "";
+      if (payload.side !== undefined) portrait.side = payload.side === "left" ? "left" : "right";
       break;
     }
     case "setLocation":
@@ -191,7 +209,11 @@ export function applyTransientCommand(inputState, command, { userId, portrait } 
       heartbeatAt: now()
     };
     if (!state.scene.portraits.some((item) => item.id === portrait.id) && !state.overflow.some((item) => item.id === portrait.id)) {
-      if (state.scene.portraits.length < MAX_SLOTS) state.scene.portraits.push({ ...clone(portrait), slot: firstFreeSlot(state.scene.portraits) });
+      if (state.scene.portraits.length < MAX_SLOTS) state.scene.portraits.push({
+        ...clone(portrait),
+        side: portrait.side === "right" ? "right" : "left",
+        slot: firstFreeSlot(state.scene.portraits)
+      });
       else state.overflow.push({ ...clone(portrait), overflow: true });
     }
   } else if (command.type === "speechHeartbeat") {

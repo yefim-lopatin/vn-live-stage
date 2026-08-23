@@ -1,0 +1,41 @@
+<div id="vn-live-stage-overlay" class="vn-cinematic-overlay" role="region" aria-label="Режим сцены">
+  <div class="vn-cinematic-background" {{#if background}}style="background-image: url('{{background}}')"{{/if}}></div>
+  <div class="vn-cinematic-vignette"></div>
+
+  <header class="vn-cinematic-caption">
+    <span>{{state.scene.name}}</span>
+    {{#if state.scene.time}}<small>{{state.scene.time}}{{#if state.scene.weather}} · {{state.scene.weather}}{{/if}}</small>{{/if}}
+  </header>
+
+  <section class="vn-cinematic-side vn-cinematic-left" aria-label="Персонажи игроков">
+    {{#each leftPortraits}}
+      <figure class="vn-cinematic-portrait {{#if speaking}}is-speaking{{/if}} {{#if dimmed}}is-dimmed{{/if}} {{#if overflow}}is-overflow{{/if}}" style="--vn-slot: {{slot}}">
+        {{#if hasImage}}<img src="{{image}}" alt="{{name}}">{{else}}<div class="vn-cinematic-placeholder"><i class="fa-solid fa-user"></i></div>{{/if}}
+        <figcaption>{{name}}</figcaption>
+      </figure>
+    {{/each}}
+  </section>
+
+  <section class="vn-cinematic-side vn-cinematic-right" aria-label="Неигровые персонажи">
+    {{#each rightPortraits}}
+      <figure class="vn-cinematic-portrait {{#if speaking}}is-speaking{{/if}} {{#if dimmed}}is-dimmed{{/if}} {{#if overflow}}is-overflow{{/if}}" style="--vn-slot: {{slot}}">
+        {{#if hasImage}}<img src="{{image}}" alt="{{name}}">{{else}}<div class="vn-cinematic-placeholder"><i class="fa-solid fa-user"></i></div>{{/if}}
+        <figcaption>{{name}}</figcaption>
+      </figure>
+    {{/each}}
+  </section>
+
+  {{#if canSpeak}}
+    <button type="button" class="vn-cinematic-speak {{#if isSpeaking}}is-active{{/if}}" data-action="speak">
+      <i class="fa-solid fa-comment-dots"></i>
+      <span>{{#if isSpeaking}}Говорю…{{else}}Удерживайте, чтобы говорить{{/if}}</span>
+    </button>
+  {{/if}}
+
+  {{#if isGM}}
+    <div class="vn-cinematic-gm-actions">
+      <button type="button" data-action="open-director" title="Открыть пульт"><i class="fa-solid fa-sliders"></i><span>Пульт</span></button>
+      <button type="button" data-action="end-stage" title="Завершить сцену"><i class="fa-solid fa-stop"></i><span>Завершить</span></button>
+    </div>
+  {{/if}}
+</div>

@@ -1,0 +1,76 @@
+<div class="vn-director">
+  <header class="vn-director-hero {{#if active}}is-live{{/if}}">
+    <div>
+      <span class="vn-director-eyebrow">РЕЖИМ СЦЕНЫ</span>
+      <h1>{{#if active}}Сцена идёт{{else}}Сцена не активна{{/if}}</h1>
+      <p>{{state.scene.name}}</p>
+    </div>
+    <button type="button" class="vn-director-live" data-action="toggle-stage">
+      {{#if active}}<i class="fa-solid fa-stop"></i> Завершить сцену{{else}}<i class="fa-solid fa-play"></i> Начать сцену{{/if}}
+    </button>
+  </header>
+
+  <section class="vn-director-section">
+    <div class="vn-director-section-title">
+      <h2>Оформление</h2>
+      <div class="vn-director-actions">
+        <button type="button" data-action="save" title="Сохранить сцену"><i class="fa-solid fa-floppy-disk"></i></button>
+        <button type="button" data-action="undo" title="Отменить"><i class="fa-solid fa-rotate-left"></i></button>
+        <button type="button" data-action="redo" title="Повторить"><i class="fa-solid fa-rotate-right"></i></button>
+      </div>
+    </div>
+    <label class="vn-director-label">Фон сцены</label>
+    <div class="vn-director-field-row">
+      <input name="background" type="text" value="{{state.scene.background}}" placeholder="Путь к изображению">
+      <button type="button" data-action="browse-background" title="Выбрать файл"><i class="fa-solid fa-folder-open"></i></button>
+      <button type="button" data-action="set-background">Применить</button>
+    </div>
+    <div class="vn-director-two-columns">
+      <label>Время <input name="scene-time" type="text" value="{{state.scene.time}}" placeholder="Например: вечер"></label>
+      <label>Погода <input name="scene-weather" type="text" value="{{state.scene.weather}}" placeholder="Например: дождь"></label>
+    </div>
+    <button type="button" class="vn-director-secondary" data-action="set-environment">Обновить подпись сцены</button>
+  </section>
+
+  <section class="vn-director-section">
+    <h2>Добавить персонажа</h2>
+    <div class="vn-director-add-grid">
+      <input name="portrait-name" type="text" placeholder="Имя персонажа">
+      <select name="portrait-side" aria-label="Сторона портрета">
+        <option value="right" selected>NPC · справа</option>
+        <option value="left">Игрок · слева</option>
+      </select>
+      <div class="vn-director-field-row vn-director-image-field">
+        <input name="portrait-image" type="text" placeholder="Путь к портрету">
+        <button type="button" data-action="browse-portrait" title="Выбрать файл"><i class="fa-solid fa-folder-open"></i></button>
+      </div>
+      <button type="button" class="vn-director-primary" data-action="add-portrait"><i class="fa-solid fa-plus"></i> Добавить</button>
+    </div>
+  </section>
+
+  <section class="vn-director-section">
+    <h2>Участники</h2>
+    {{#if hasPortraits}}
+      <div class="vn-director-cast">
+        {{#each portraits}}
+          <article class="vn-director-cast-item">
+            {{#if image}}<img src="{{image}}" alt="">{{else}}<div class="vn-director-avatar"><i class="fa-solid fa-user"></i></div>{{/if}}
+            <div><strong>{{name}}</strong><small>{{#if isLeft}}Слева · игроки{{else}}Справа · NPC{{/if}}</small></div>
+            <button type="button" data-action="switch-side" data-portrait-id="{{id}}" data-side="{{#if isLeft}}right{{else}}left{{/if}}" title="Перенести на другую сторону"><i class="fa-solid fa-arrow-right-arrow-left"></i></button>
+            <button type="button" data-action="remove-portrait" data-portrait-id="{{id}}" title="Убрать"><i class="fa-solid fa-trash"></i></button>
+          </article>
+        {{/each}}
+      </div>
+    {{else}}
+      <p class="vn-director-empty">Портреты игроков появятся автоматически при запуске сцены. NPC можно добавить выше.</p>
+    {{/if}}
+  </section>
+
+  <section class="vn-director-section vn-director-load">
+    <label>Загрузить сохранённую сцену по ID</label>
+    <div class="vn-director-field-row">
+      <input name="scene-id" type="text" placeholder="ID сцены">
+      <button type="button" data-action="load-scene">Загрузить</button>
+    </div>
+  </section>
+</div>

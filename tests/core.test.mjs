@@ -20,7 +20,27 @@ test("scene commands change only the scene and increment revision", () => {
   assert.equal(result.state.revision, 1);
   assert.equal(result.state.scene.portraits[0].name, "Ави");
   assert.equal(result.state.scene.portraits[0].slot, 0);
+  assert.equal(result.state.scene.portraits[0].side, "right");
   assert.equal(result.event.after.portraits.length, 1);
+});
+
+test("stage starts inactive and portrait side can be changed", () => {
+  const initial = createInitialState();
+  assert.equal(initial.stage.active, false);
+
+  const added = applySceneCommand(initial, createCommand("addPortrait", {
+    name: "NPC",
+    image: "npc.webp",
+    side: "right"
+  }, { userId: "gm", revision: 0 })).state;
+  const portraitId = added.scene.portraits[0].id;
+  const updated = applySceneCommand(added, createCommand("updatePortrait", {
+    portraitId,
+    side: "left"
+  }, { userId: "gm", revision: 1 })).state;
+
+  assert.equal(updated.scene.portraits[0].side, "left");
+  assert.equal(updated.revision, 2);
 });
 
 test("all main slots are bounded and overflow is transient", () => {

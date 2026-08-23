@@ -21,6 +21,7 @@ export class SystemAdapter {
       name: this.getName(actor),
       image: this.getImage(actor),
       slot: 0,
+      side: "left",
       position: null,
       hidden: false
     };

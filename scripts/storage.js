@@ -1,4 +1,4 @@
-import { MODULE_ID, clone, createInitialState } from "./core.js";
+import { MODULE_ID, clone, createInitialState, createSceneDefinition } from "./core.js";
 
 export const FLAGS = Object.freeze({
   scene: "scene",
@@ -8,7 +8,15 @@ export const FLAGS = Object.freeze({
 
 export async function readLiveState() {
   const stored = game.settings.get(MODULE_ID, "liveState");
-  return stored ? { ...createInitialState(), ...clone(stored) } : createInitialState();
+  if (!stored) return createInitialState();
+  const initial = createInitialState();
+  const value = clone(stored);
+  return {
+    ...initial,
+    ...value,
+    stage: { ...initial.stage, ...(value.stage ?? {}) },
+    scene: createSceneDefinition(value.scene)
+  };
 }
 
 export async function writeLiveState(state) {

@@ -2,10 +2,13 @@ import {
   MODULE_ID,
   SOCKET_NAME,
   MAX_HISTORY,
+  MAX_SLOTS,
   SPEECH_TIMEOUT_MS,
   clone,
   createCommand,
+  createSceneDefinition,
   createInitialState,
+  firstFreeSlot,
   applySceneCommand,
   applyTransientCommand,
   expireSpeaking
@@ -70,8 +73,9 @@ export class LiveStageSession {
 
   async startSpeaking() {
     if (this.speaking) return this.getState();
-    this.speaking = true;
+    if (!this.state.stage?.active) throw new Error("Режим сцены не активен");
     const result = await this.dispatch({ type: "speechStart", payload: {} });
+    this.speaking = true;
     this.speechTimer = setInterval(() => {
       if (this.speaking) this.dispatch({ type: "speechHeartbeat", payload: {} }).catch(() => {});
     }, 3000);
@@ -84,6 +88,22 @@ export class LiveStageSession {
     clearInterval(this.speechTimer);
     this.speechTimer = null;
     return this.dispatch({ type: "speechStop", payload: {} });
+  }
+
+  async activateStage() {
+    return this.dispatch({ type: "activateStage", payload: {} });
+  }
+
+  async deactivateStage() {
+    return this.dispatch({ type: "deactivateStage", payload: {} });
+  }
+
+  async toggleStage() {
+    return this.state.stage?.active ? this.deactivateStage() : this.activateStage();
+  }
+
+  canCurrentUserSpeak() {
+    return Boolean(this._portraitFor(game.user.id));
   }
 
   async saveScene(options = {}) {
@@ -109,7 +129,20 @@ export class LiveStageSession {
     try {
       const user = game.users.get(command.userId);
       this._authorize(command, user);
-      if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) {
+      if (command.type === "activateStage") {
+        this._seedPlayerPortraits();
+        this.state.stage = {
+          active: true,
+          activatedAt: Date.now(),
+          activatedBy: command.userId
+        };
+      } else if (command.type === "deactivateStage") {
+        this.state.stage = { active: false, activatedAt: null, activatedBy: null };
+        this.state.speaking = {};
+        this.state.overflow = [];
+        this._resetLocalSpeaking();
+      } else if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) {
+        if (command.type !== "speechStop" && !this.state.stage?.active) throw new Error("Режим сцены не активен");
         const portrait = this._portraitFor(command.userId);
         if (command.type === "speechStart" && !portrait) throw new Error("У игрока нет персонажа для портрета");
         this.state = applyTransientCommand(this.state, command, { userId: command.userId, portrait });
@@ -118,7 +151,7 @@ export class LiveStageSession {
       } else if (command.type === "loadScene") {
         const scene = getScene(command.payload.sceneId);
         if (!scene) throw new Error("Сохранённая сцена не найдена");
-        this.state.scene = clone(scene);
+        this.state.scene = createSceneDefinition(scene);
         this.state.revision += 1;
         this.state.history = [];
         this.state.redo = [];
@@ -148,12 +181,13 @@ export class LiveStageSession {
     if (!user) throw new Error("Неизвестный пользователь");
     const policy = normalizePolicy(game.settings.get(MODULE_ID, "permissionPolicy") ?? DEFAULT_POLICY);
     if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) return;
+    if (["activateStage", "deactivateStage"].includes(command.type) && user.isGM) return;
     if (command.type === "createRequest" && user.active !== false) return;
     if (["resolveRequest"].includes(command.type) && can(user, "requestReview", policy)) return;
     if (["saveScene"].includes(command.type) && can(user, "saveScene", policy)) return;
     if (["undo", "redo"].includes(command.type) && can(user, "undo", policy)) return;
     if (["loadScene"].includes(command.type) && can(user, "sceneControl", policy)) return;
-    if (["addPortrait", "removePortrait", "movePortrait", "setLocation", "setBackground", "setEnvironment"].includes(command.type) && can(user, "sceneControl", policy)) return;
+    if (["addPortrait", "removePortrait", "movePortrait", "updatePortrait", "setLocation", "setBackground", "setEnvironment"].includes(command.type) && can(user, "sceneControl", policy)) return;
     throw new Error("Недостаточно прав для этой команды");
   }
 
@@ -165,6 +199,30 @@ export class LiveStageSession {
     const known = [...this.state.scene.portraits, ...this.state.overflow].find((item) => item.profileId === profileId);
     if (known) return known;
     return getSystemAdapter().getPortrait(game.users.get(userId));
+  }
+
+  _seedPlayerPortraits() {
+    const knownProfiles = new Set([...this.state.scene.portraits, ...this.state.overflow].map((item) => item.profileId));
+    for (const user of game.users.filter((item) => item.active && !item.isGM)) {
+      const portrait = getSystemAdapter().getPortrait(user);
+      if (!portrait || knownProfiles.has(portrait.profileId)) continue;
+      if (this.state.scene.portraits.length < MAX_SLOTS) {
+        this.state.scene.portraits.push({
+          ...portrait,
+          side: "left",
+          slot: firstFreeSlot(this.state.scene.portraits)
+        });
+      } else {
+        this.state.overflow.push({ ...portrait, side: "left", overflow: true });
+      }
+      knownProfiles.add(portrait.profileId);
+    }
+  }
+
+  _resetLocalSpeaking() {
+    this.speaking = false;
+    clearInterval(this.speechTimer);
+    this.speechTimer = null;
   }
 
   _undo() {
@@ -196,6 +254,7 @@ export class LiveStageSession {
     if (message.kind === "snapshot") {
       if (!game.user.isGM && message.state) {
         this.state = clone(message.state);
+        if (!this.state.stage?.active || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
         this._emit();
       }
       return;
@@ -215,7 +274,10 @@ export class LiveStageSession {
 
   async _requestSnapshot() {
     const response = await this._dispatchSocket({ kind: "sync", userId: game.user.id });
-    if (response?.state) this.state = clone(response.state);
+    if (response?.state) {
+      this.state = clone(response.state);
+      if (!this.state.stage?.active || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
+    }
   }
 
   async _dispatchSocket(message) {
