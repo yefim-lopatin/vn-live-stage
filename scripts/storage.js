@@ -3,7 +3,8 @@ import { MODULE_ID, clone, createInitialState, createSceneDefinition } from "./c
 export const FLAGS = Object.freeze({
   scene: "scene",
   portrait: "portraitProfile",
-  location: "locationPreset"
+  location: "locationPreset",
+  group: "participantGroup"
 });
 
 export async function readLiveState() {

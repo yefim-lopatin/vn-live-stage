@@ -18,10 +18,12 @@ export class SystemAdapter {
       id: `user-${user.id}`,
       profileId: `user-${user.id}`,
       sourceUserId: user.id,
+      sourceActorId: actor.id,
       name: this.getName(actor),
       image: this.getImage(actor),
       slot: 0,
       side: "left",
+      flipped: false,
       position: null,
       hidden: false
     };

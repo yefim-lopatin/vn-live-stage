@@ -166,6 +166,16 @@
   margin-top: 5px;
 }
 
+.vn-director-section > label input {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+}
+
+.vn-director-spaced {
+  margin-top: 14px;
+}
+
 .vn-director-secondary {
   margin-top: 5px;
   padding: 0 12px;
@@ -187,15 +197,19 @@
   background: var(--vn-accent) !important;
 }
 
+.vn-director-avatar-button {
+  padding: 0 12px;
+}
+
 .vn-director-cast {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 
 .vn-director-cast-item {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 32px 32px;
+  grid-template-columns: 42px minmax(0, 1fr) repeat(4, 32px);
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -212,6 +226,8 @@
   border-radius: 5px;
   object-fit: cover;
   background: #0c0b0f;
+  border: 0;
+  box-shadow: none;
 }
 
 .vn-director-avatar {
@@ -243,6 +259,22 @@
   height: 30px;
 }
 
+.vn-director-cast-item.is-gm-speaker {
+  border-color: rgba(214, 173, 104, .68);
+  background: #30291f;
+}
+
+.vn-director-cast-item.is-gm-speaker [data-action="select-speaker"] {
+  color: #1a140d;
+  background: var(--vn-accent);
+}
+
+.vn-director-help {
+  margin: 12px 0 8px;
+  color: var(--vn-muted);
+  font-size: .72rem;
+}
+
 .vn-director-empty {
   margin: 0;
   padding: 16px;
@@ -252,8 +284,100 @@
   text-align: center;
 }
 
-.vn-director-load {
-  padding-bottom: 24px;
+.vn-director-library {
+  border-bottom: 1px solid var(--vn-line);
+}
+
+.vn-director-library summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  color: var(--vn-ink);
+  font-weight: 750;
+  background: rgba(255, 255, 255, .025);
+  cursor: pointer;
+}
+
+.vn-director-library summary small {
+  min-width: 24px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: var(--vn-muted);
+  text-align: center;
+  background: rgba(255, 255, 255, .08);
+}
+
+.vn-director-library-body {
+  padding: 0 24px 20px;
+}
+
+.vn-director-presets,
+.vn-director-groups {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.vn-director-preset,
+.vn-director-group {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid var(--vn-line);
+  border-radius: 7px;
+  background: var(--vn-panel-raised);
+}
+
+.vn-director-group {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.vn-director-preset img,
+.vn-director-preset-empty {
+  width: 72px;
+  height: 44px;
+  border: 0;
+  border-radius: 4px;
+  object-fit: cover;
+  box-shadow: none;
+  background: #0c0b0f;
+}
+
+.vn-director-preset-empty {
+  display: grid;
+  place-items: center;
+  color: var(--vn-muted);
+}
+
+.vn-director-preset div,
+.vn-director-group div {
+  min-width: 0;
+}
+
+.vn-director-preset strong,
+.vn-director-preset small,
+.vn-director-group strong,
+.vn-director-group small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vn-director-preset small,
+.vn-director-group small {
+  margin-top: 3px;
+  color: var(--vn-muted);
+  font-size: .7rem;
+}
+
+.vn-director-preset button,
+.vn-director-group button {
+  padding: 0 12px;
 }
 
 .vn-cinematic-overlay {
@@ -272,6 +396,19 @@
   position: absolute;
   inset: 0;
 }
+
+.vn-cinematic-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  height: clamp(42px, 6vh, 66px);
+  pointer-events: none;
+  background: #050507;
+}
+
+.vn-cinematic-bar-top { top: 0; }
+.vn-cinematic-bar-bottom { bottom: 0; }
 
 .vn-cinematic-background {
   z-index: -3;
@@ -294,9 +431,9 @@
 
 .vn-cinematic-caption {
   position: absolute;
-  top: 3.2vh;
+  top: .7vh;
   left: 50%;
-  z-index: 4;
+  z-index: 6;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -307,13 +444,13 @@
 
 .vn-cinematic-caption span {
   font-family: Georgia, \"Times New Roman\", serif;
-  font-size: clamp(1rem, 1.7vw, 1.55rem);
+  font-size: clamp(.9rem, 1.45vw, 1.35rem);
   font-weight: 650;
   letter-spacing: .06em;
 }
 
 .vn-cinematic-caption small {
-  margin-top: 5px;
+  margin-top: 2px;
   color: rgba(255, 255, 255, .68);
   font-size: .7rem;
   letter-spacing: .12em;
@@ -322,43 +459,37 @@
 
 .vn-cinematic-side {
   position: absolute;
-  top: 8vh;
-  bottom: 0;
+  top: 6vh;
+  bottom: 6vh;
   z-index: 1;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   align-items: flex-end;
-  width: 50vw;
-  padding: 0 1.5vw;
+  gap: clamp(4px, 1vw, 18px);
+  width: 48.5vw;
+  padding: 0 1vw;
   pointer-events: none;
 }
 
 .vn-cinematic-left {
   left: 0;
-  justify-content: flex-start;
+  justify-items: start;
 }
 
 .vn-cinematic-right {
   right: 0;
-  justify-content: flex-start;
-  flex-direction: row-reverse;
+  justify-items: end;
 }
 
 .vn-cinematic-portrait {
   position: relative;
-  flex: 0 1 min(29vw, 430px);
-  width: min(29vw, 430px);
+  width: 100%;
+  max-width: 430px;
   min-width: 0;
-  height: 86vh;
+  height: 82vh;
   margin: 0;
   transform-origin: center bottom;
-  filter: brightness(.95) saturate(.92);
-  transition: transform .2s ease, filter .2s ease, opacity .2s ease;
   animation: vn-portrait-enter .42s cubic-bezier(.2, .8, .2, 1) both;
-}
-
-.vn-cinematic-left .vn-cinematic-portrait + .vn-cinematic-portrait,
-.vn-cinematic-right .vn-cinematic-portrait + .vn-cinematic-portrait {
-  margin-inline-start: -10vw;
 }
 
 .vn-cinematic-portrait img {
@@ -366,9 +497,18 @@
   inset: 0;
   width: 100%;
   height: 100%;
+  border: 0 !important;
+  border-radius: 0;
   object-fit: contain;
   object-position: center bottom;
-  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, .58));
+  box-shadow: none !important;
+  background: transparent;
+  filter: brightness(.62) saturate(.78) drop-shadow(0 14px 18px rgba(0, 0, 0, .58));
+  transition: filter .18s ease;
+}
+
+.vn-cinematic-portrait.is-flipped img {
+  transform: scaleX(-1);
 }
 
 .vn-cinematic-placeholder {
@@ -381,7 +521,7 @@
   max-width: 190px;
   aspect-ratio: 3 / 4;
   transform: translateX(-50%);
-  border: 1px solid rgba(255, 255, 255, .16);
+  border: 0;
   border-radius: 48% 48% 12px 12px;
   color: rgba(255, 255, 255, .42);
   font-size: 4rem;
@@ -391,12 +531,12 @@
 .vn-cinematic-portrait figcaption {
   position: absolute;
   left: 50%;
-  bottom: 8vh;
+  bottom: 2vh;
   z-index: 2;
   max-width: 90%;
   padding: 7px 16px;
   transform: translateX(-50%);
-  border: 1px solid rgba(255, 255, 255, .18);
+  border: 0;
   border-radius: 4px;
   overflow: hidden;
   color: rgba(255, 255, 255, .9);
@@ -412,43 +552,27 @@
 
 .vn-cinematic-portrait.is-speaking {
   z-index: 3;
-  transform: translateY(-1.6vh) scale(1.045);
-  filter: brightness(1.18) saturate(1.12);
 }
 
 .vn-cinematic-portrait.is-speaking img {
-  filter:
-    drop-shadow(0 0 12px rgba(255, 226, 166, .5))
-    drop-shadow(0 16px 20px rgba(0, 0, 0, .62));
-}
-
-.vn-cinematic-portrait.is-speaking figcaption {
-  border-color: rgba(232, 195, 130, .78);
-  box-shadow: 0 0 18px rgba(214, 173, 104, .22);
-}
-
-.vn-cinematic-portrait.is-dimmed {
-  opacity: .47;
-  filter: brightness(.48) saturate(.58);
-  transform: scale(.985);
+  filter: brightness(1) saturate(1) drop-shadow(0 14px 18px rgba(0, 0, 0, .58));
 }
 
 .vn-cinematic-portrait.is-overflow {
-  max-width: 22vw;
-  opacity: .82;
+  opacity: .75;
 }
 
 .vn-cinematic-speak {
   position: absolute;
   left: 50%;
-  bottom: 2.5vh;
+  bottom: .7vh;
   z-index: 6;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   min-width: 250px;
-  min-height: 48px;
+  min-height: 42px;
   padding: 0 20px;
   transform: translateX(-50%);
   border: 1px solid rgba(229, 193, 128, .72);
@@ -467,15 +591,21 @@
   filter: brightness(1.13);
 }
 
+.vn-cinematic-speak:disabled {
+  opacity: .58;
+  filter: none;
+  cursor: not-allowed;
+}
+
 .vn-cinematic-speak.is-active {
-  border-color: #ffe1a5;
-  background: linear-gradient(180deg, #86513e, #5a302a);
-  box-shadow: 0 0 28px rgba(233, 173, 102, .34);
+  border-color: #e5c487;
+  background: linear-gradient(180deg, #6f4937, #4c3029);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .45);
 }
 
 .vn-cinematic-gm-actions {
   position: absolute;
-  top: 22px;
+  top: .8vh;
   right: 24px;
   z-index: 6;
   display: flex;
@@ -532,13 +662,11 @@ body.vn-live-stage-hide-ui #logo {
   .vn-director-hero { align-items: stretch; flex-direction: column; }
   .vn-director-cast { grid-template-columns: 1fr; }
   .vn-director-two-columns { grid-template-columns: 1fr; }
-  .vn-cinematic-caption { top: 2vh; }
-  .vn-cinematic-side { top: 9vh; width: 52vw; padding: 0; }
-  .vn-cinematic-portrait { flex-basis: 38vw; width: 38vw; height: 80vh; }
-  .vn-cinematic-left .vn-cinematic-portrait + .vn-cinematic-portrait,
-  .vn-cinematic-right .vn-cinematic-portrait + .vn-cinematic-portrait { margin-inline-start: -22vw; }
-  .vn-cinematic-portrait figcaption { bottom: 10vh; padding: 5px 9px; }
-  .vn-cinematic-speak { bottom: 2vh; min-width: 210px; min-height: 44px; }
+  .vn-cinematic-caption { top: .7vh; }
+  .vn-cinematic-side { top: 6vh; bottom: 6vh; width: 50vw; padding: 0 3px; gap: 3px; }
+  .vn-cinematic-portrait { width: 100%; height: 80vh; }
+  .vn-cinematic-portrait figcaption { bottom: 2vh; padding: 5px 9px; }
+  .vn-cinematic-speak { bottom: .7vh; min-width: 210px; min-height: 40px; }
   .vn-cinematic-gm-actions span { display: none; }
 }
 

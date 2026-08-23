@@ -2,13 +2,11 @@ import {
   MODULE_ID,
   SOCKET_NAME,
   MAX_HISTORY,
-  MAX_SLOTS,
   SPEECH_TIMEOUT_MS,
   clone,
   createCommand,
   createSceneDefinition,
   createInitialState,
-  firstFreeSlot,
   applySceneCommand,
   applyTransientCommand,
   expireSpeaking
@@ -102,6 +100,31 @@ export class LiveStageSession {
     return this.state.stage?.active ? this.deactivateStage() : this.activateStage();
   }
 
+  async newScene(name = "Новая сцена") {
+    return this.dispatch({ type: "newScene", payload: { name } });
+  }
+
+  async addPortraits(portraits) {
+    return this.dispatch({
+      type: "addPortraits",
+      payload: { portraits: this._refreshPortraits(portraits) }
+    });
+  }
+
+  async addPlayerAvatars() {
+    const adapter = getSystemAdapter();
+    const portraits = game.users
+      .filter((user) => !user.isGM)
+      .map((user) => adapter.getPortrait(user))
+      .filter(Boolean);
+    if (!portraits.length) throw new Error("У игроков нет назначенных персонажей с аватарами");
+    return this.addPortraits(portraits);
+  }
+
+  async selectGmSpeaker(portraitId) {
+    return this.dispatch({ type: "setGmSpeaker", payload: { portraitId } });
+  }
+
   canCurrentUserSpeak() {
     return Boolean(this._portraitFor(game.user.id));
   }
@@ -130,17 +153,28 @@ export class LiveStageSession {
       const user = game.users.get(command.userId);
       this._authorize(command, user);
       if (command.type === "activateStage") {
-        this._seedPlayerPortraits();
         this.state.stage = {
+          ...this.state.stage,
           active: true,
           activatedAt: Date.now(),
           activatedBy: command.userId
         };
       } else if (command.type === "deactivateStage") {
-        this.state.stage = { active: false, activatedAt: null, activatedBy: null };
+        this.state.stage = {
+          ...this.state.stage,
+          active: false,
+          activatedAt: null,
+          activatedBy: null
+        };
         this.state.speaking = {};
         this.state.overflow = [];
         this._resetLocalSpeaking();
+      } else if (command.type === "setGmSpeaker") {
+        const portraitId = command.payload?.portraitId ?? null;
+        if (portraitId && !this.state.scene.portraits.some((portrait) => portrait.id === portraitId)) {
+          throw new Error("Выбранный портрет не найден");
+        }
+        this.state.stage.gmSpeakerPortraitId = portraitId;
       } else if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) {
         if (command.type !== "speechStop" && !this.state.stage?.active) throw new Error("Режим сцены не активен");
         const portrait = this._portraitFor(command.userId);
@@ -152,6 +186,8 @@ export class LiveStageSession {
         const scene = getScene(command.payload.sceneId);
         if (!scene) throw new Error("Сохранённая сцена не найдена");
         this.state.scene = createSceneDefinition(scene);
+        this.state.stage.gmSpeakerPortraitId = null;
+        this.state.speaking = {};
         this.state.revision += 1;
         this.state.history = [];
         this.state.redo = [];
@@ -181,13 +217,13 @@ export class LiveStageSession {
     if (!user) throw new Error("Неизвестный пользователь");
     const policy = normalizePolicy(game.settings.get(MODULE_ID, "permissionPolicy") ?? DEFAULT_POLICY);
     if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) return;
-    if (["activateStage", "deactivateStage"].includes(command.type) && user.isGM) return;
+    if (["activateStage", "deactivateStage", "setGmSpeaker"].includes(command.type) && user.isGM) return;
     if (command.type === "createRequest" && user.active !== false) return;
     if (["resolveRequest"].includes(command.type) && can(user, "requestReview", policy)) return;
     if (["saveScene"].includes(command.type) && can(user, "saveScene", policy)) return;
     if (["undo", "redo"].includes(command.type) && can(user, "undo", policy)) return;
     if (["loadScene"].includes(command.type) && can(user, "sceneControl", policy)) return;
-    if (["addPortrait", "removePortrait", "movePortrait", "updatePortrait", "setLocation", "setBackground", "setEnvironment"].includes(command.type) && can(user, "sceneControl", policy)) return;
+    if (["newScene", "addPortrait", "addPortraits", "removePortrait", "movePortrait", "updatePortrait", "setSceneDetails", "setLocation", "setBackground", "setEnvironment"].includes(command.type) && can(user, "sceneControl", policy)) return;
     throw new Error("Недостаточно прав для этой команды");
   }
 
@@ -195,28 +231,32 @@ export class LiveStageSession {
     const active = this.state.speaking[userId];
     const existing = active && [...this.state.scene.portraits, ...this.state.overflow].find((item) => item.id === active.portraitId);
     if (existing) return existing;
+    const user = game.users.get(userId);
+    if (user?.isGM) {
+      const portraitId = this.state.stage?.gmSpeakerPortraitId;
+      return this.state.scene.portraits.find((portrait) => portrait.id === portraitId) ?? null;
+    }
     const profileId = `user-${userId}`;
     const known = [...this.state.scene.portraits, ...this.state.overflow].find((item) => item.profileId === profileId);
     if (known) return known;
-    return getSystemAdapter().getPortrait(game.users.get(userId));
+    return getSystemAdapter().getPortrait(user);
   }
 
-  _seedPlayerPortraits() {
-    const knownProfiles = new Set([...this.state.scene.portraits, ...this.state.overflow].map((item) => item.profileId));
-    for (const user of game.users.filter((item) => item.active && !item.isGM)) {
-      const portrait = getSystemAdapter().getPortrait(user);
-      if (!portrait || knownProfiles.has(portrait.profileId)) continue;
-      if (this.state.scene.portraits.length < MAX_SLOTS) {
-        this.state.scene.portraits.push({
-          ...portrait,
-          side: "left",
-          slot: firstFreeSlot(this.state.scene.portraits)
-        });
-      } else {
-        this.state.overflow.push({ ...portrait, side: "left", overflow: true });
-      }
-      knownProfiles.add(portrait.profileId);
-    }
+  _refreshPortraits(portraits = []) {
+    const adapter = getSystemAdapter();
+    return portraits.map((portrait) => {
+      if (!portrait?.sourceUserId) return clone(portrait);
+      const current = adapter.getPortrait(game.users.get(portrait.sourceUserId));
+      if (!current) return clone(portrait);
+      return {
+        ...clone(portrait),
+        ...current,
+        id: portrait.id ?? current.id,
+        profileId: portrait.profileId ?? current.profileId,
+        side: portrait.side === "right" ? "right" : "left",
+        flipped: Boolean(portrait.flipped)
+      };
+    });
   }
 
   _resetLocalSpeaking() {

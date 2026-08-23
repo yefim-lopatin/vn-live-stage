@@ -8,10 +8,14 @@ export const SPEECH_TIMEOUT_MS = 9000;
 export const COMMANDS = Object.freeze([
   "activateStage",
   "deactivateStage",
+  "newScene",
   "addPortrait",
+  "addPortraits",
   "removePortrait",
   "movePortrait",
   "updatePortrait",
+  "setSceneDetails",
+  "setGmSpeaker",
   "setLocation",
   "setBackground",
   "setEnvironment",
@@ -37,6 +41,22 @@ export function makeId(prefix = "id") {
   return `${prefix}-${random}`;
 }
 
+function normalizePortrait(portrait = {}, index = 0) {
+  return {
+    id: portrait.id ?? makeId("portrait"),
+    profileId: portrait.profileId ?? null,
+    sourceUserId: portrait.sourceUserId ?? null,
+    sourceActorId: portrait.sourceActorId ?? null,
+    name: String(portrait.name ?? "Безымянный персонаж"),
+    image: portrait.image ?? "",
+    slot: Number.isInteger(portrait.slot) ? portrait.slot : index,
+    side: portrait.side === "left" ? "left" : "right",
+    flipped: Boolean(portrait.flipped),
+    position: portrait.position ?? null,
+    hidden: Boolean(portrait.hidden)
+  };
+}
+
 export function createSceneDefinition(input = {}) {
   const portraits = Array.isArray(input.portraits) ? input.portraits : [];
   return {
@@ -46,16 +66,7 @@ export function createSceneDefinition(input = {}) {
     background: input.background ?? null,
     time: String(input.time ?? ""),
     weather: String(input.weather ?? ""),
-    portraits: portraits.map((portrait, index) => ({
-      id: portrait.id ?? makeId("portrait"),
-      profileId: portrait.profileId ?? null,
-      name: String(portrait.name ?? "Безымянный персонаж"),
-      image: portrait.image ?? "",
-      slot: Number.isInteger(portrait.slot) ? portrait.slot : index,
-      side: portrait.side === "left" ? "left" : "right",
-      position: portrait.position ?? null,
-      hidden: Boolean(portrait.hidden)
-    }))
+    portraits: portraits.map(normalizePortrait)
   };
 }
 
@@ -65,7 +76,8 @@ export function createInitialState() {
     stage: {
       active: false,
       activatedAt: null,
-      activatedBy: null
+      activatedBy: null,
+      gmSpeakerPortraitId: null
     },
     scene: createSceneDefinition(),
     overflow: [],
@@ -117,19 +129,46 @@ export function applySceneCommand(inputState, command) {
   const payload = command.payload ?? {};
 
   switch (command.type) {
+    case "newScene":
+      state.scene = createSceneDefinition({ name: payload.name || "Новая сцена" });
+      state.overflow = [];
+      state.speaking = {};
+      state.stage.gmSpeakerPortraitId = null;
+      break;
     case "addPortrait": {
       if (state.scene.portraits.length >= MAX_SLOTS) throw new Error("Все основные слоты заняты");
       if (!payload.name && !payload.image) throw new Error("Портрет должен иметь имя или изображение");
-      state.scene.portraits.push({
-        id: payload.id ?? makeId("portrait"),
-        profileId: payload.profileId ?? null,
-        name: String(payload.name ?? "Безымянный персонаж"),
-        image: payload.image ?? "",
-        slot: Number.isInteger(payload.slot) ? payload.slot : firstFreeSlot(state.scene.portraits),
-        side: payload.side === "left" ? "left" : "right",
-        position: payload.position ?? null,
-        hidden: Boolean(payload.hidden)
-      });
+      state.scene.portraits.push(normalizePortrait({
+        ...payload,
+        slot: Number.isInteger(payload.slot) ? payload.slot : firstFreeSlot(state.scene.portraits)
+      }));
+      break;
+    }
+    case "addPortraits": {
+      const portraits = Array.isArray(payload.portraits) ? payload.portraits : [];
+      const known = new Set(state.scene.portraits.flatMap((portrait) => [portrait.id, portrait.profileId]).filter(Boolean));
+      for (const portrait of portraits) {
+        if (!portrait?.name && !portrait?.image) continue;
+        const existing = state.scene.portraits.find((item) => (
+          (portrait.id && item.id === portrait.id)
+          || (portrait.profileId && item.profileId === portrait.profileId)
+        ));
+        if (existing) {
+          existing.name = String(portrait.name ?? existing.name);
+          existing.image = portrait.image ?? existing.image;
+          existing.sourceUserId = portrait.sourceUserId ?? existing.sourceUserId ?? null;
+          existing.sourceActorId = portrait.sourceActorId ?? existing.sourceActorId ?? null;
+          continue;
+        }
+        if (state.scene.portraits.length >= MAX_SLOTS) break;
+        const normalized = normalizePortrait({
+          ...portrait,
+          slot: firstFreeSlot(state.scene.portraits)
+        });
+        state.scene.portraits.push(normalized);
+        if (normalized.id) known.add(normalized.id);
+        if (normalized.profileId) known.add(normalized.profileId);
+      }
       break;
     }
     case "removePortrait": {
@@ -138,6 +177,7 @@ export function applySceneCommand(inputState, command) {
       if (state.scene.portraits.length === before.scene.portraits.length && state.overflow.length === before.overflow.length) {
         throw new Error("Портрет не найден");
       }
+      if (state.stage.gmSpeakerPortraitId === payload.portraitId) state.stage.gmSpeakerPortraitId = null;
       break;
     }
     case "movePortrait": {
@@ -153,8 +193,14 @@ export function applySceneCommand(inputState, command) {
       if (payload.name !== undefined) portrait.name = String(payload.name || "Безымянный персонаж");
       if (payload.image !== undefined) portrait.image = payload.image ?? "";
       if (payload.side !== undefined) portrait.side = payload.side === "left" ? "left" : "right";
+      if (payload.flipped !== undefined) portrait.flipped = Boolean(payload.flipped);
       break;
     }
+    case "setSceneDetails":
+      state.scene.name = String(payload.name ?? state.scene.name ?? "Новая сцена");
+      state.scene.time = String(payload.time ?? state.scene.time ?? "");
+      state.scene.weather = String(payload.weather ?? state.scene.weather ?? "");
+      break;
     case "setLocation":
       state.scene.locationId = payload.locationId ?? null;
       break;

@@ -12,28 +12,36 @@
 
   <section class="vn-director-section">
     <div class="vn-director-section-title">
-      <h2>Оформление</h2>
+      <h2>Текущая сцена</h2>
       <div class="vn-director-actions">
-        <button type="button" data-action="save" title="Сохранить сцену"><i class="fa-solid fa-floppy-disk"></i></button>
+        <button type="button" data-action="new-scene" title="Новая пустая сцена"><i class="fa-solid fa-file-circle-plus"></i></button>
+        <button type="button" data-action="save" title="Обновить текущую сцену"><i class="fa-solid fa-floppy-disk"></i></button>
         <button type="button" data-action="undo" title="Отменить"><i class="fa-solid fa-rotate-left"></i></button>
         <button type="button" data-action="redo" title="Повторить"><i class="fa-solid fa-rotate-right"></i></button>
       </div>
     </div>
-    <label class="vn-director-label">Фон сцены</label>
+    <div class="vn-director-two-columns">
+      <label>Название <input name="scene-name" type="text" value="{{state.scene.name}}" placeholder="Таверна"></label>
+      <label>Время <input name="scene-time" type="text" value="{{state.scene.time}}" placeholder="Вечер"></label>
+    </div>
+    <label>Подпись / погода <input name="scene-weather" type="text" value="{{state.scene.weather}}" placeholder="Дождь, праздник, тревога…"></label>
+    <button type="button" class="vn-director-secondary" data-action="set-scene-details">Применить название и подпись</button>
+
+    <label class="vn-director-label vn-director-spaced">Фон сцены</label>
     <div class="vn-director-field-row">
       <input name="background" type="text" value="{{state.scene.background}}" placeholder="Путь к изображению">
       <button type="button" data-action="browse-background" title="Выбрать файл"><i class="fa-solid fa-folder-open"></i></button>
       <button type="button" data-action="set-background">Применить</button>
     </div>
-    <div class="vn-director-two-columns">
-      <label>Время <input name="scene-time" type="text" value="{{state.scene.time}}" placeholder="Например: вечер"></label>
-      <label>Погода <input name="scene-weather" type="text" value="{{state.scene.weather}}" placeholder="Например: дождь"></label>
-    </div>
-    <button type="button" class="vn-director-secondary" data-action="set-environment">Обновить подпись сцены</button>
   </section>
 
   <section class="vn-director-section">
-    <h2>Добавить персонажа</h2>
+    <div class="vn-director-section-title">
+      <h2>Участники</h2>
+      <button type="button" class="vn-director-avatar-button" data-action="add-player-avatars">
+        <i class="fa-solid fa-users"></i> Из аватаров игроков{{#if playerAvatarCount}} · {{playerAvatarCount}}{{/if}}
+      </button>
+    </div>
     <div class="vn-director-add-grid">
       <input name="portrait-name" type="text" placeholder="Имя персонажа">
       <select name="portrait-side" aria-label="Сторона портрета">
@@ -46,31 +54,68 @@
       </div>
       <button type="button" class="vn-director-primary" data-action="add-portrait"><i class="fa-solid fa-plus"></i> Добавить</button>
     </div>
-  </section>
 
-  <section class="vn-director-section">
-    <h2>Участники</h2>
     {{#if hasPortraits}}
+      <p class="vn-director-help">Нажмите <i class="fa-solid fa-comment-dots"></i>, чтобы выбрать портрет, который будет говорить при удержании кнопки GM.</p>
       <div class="vn-director-cast">
         {{#each portraits}}
-          <article class="vn-director-cast-item">
+          <article class="vn-director-cast-item {{#if isGmSpeaker}}is-gm-speaker{{/if}}">
             {{#if image}}<img src="{{image}}" alt="">{{else}}<div class="vn-director-avatar"><i class="fa-solid fa-user"></i></div>{{/if}}
-            <div><strong>{{name}}</strong><small>{{#if isLeft}}Слева · игроки{{else}}Справа · NPC{{/if}}</small></div>
+            <div><strong>{{name}}</strong><small>{{#if isLeft}}Слева · игрок{{else}}Справа · NPC{{/if}}{{#if flipped}} · отражён{{/if}}</small></div>
+            <button type="button" data-action="select-speaker" data-portrait-id="{{id}}" data-selected="{{isGmSpeaker}}" title="Выбрать говорящего GM"><i class="fa-solid fa-comment-dots"></i></button>
+            <button type="button" data-action="flip-portrait" data-portrait-id="{{id}}" data-flipped="{{flipped}}" title="Отразить по горизонтали"><i class="fa-solid fa-arrows-left-right"></i></button>
             <button type="button" data-action="switch-side" data-portrait-id="{{id}}" data-side="{{#if isLeft}}right{{else}}left{{/if}}" title="Перенести на другую сторону"><i class="fa-solid fa-arrow-right-arrow-left"></i></button>
             <button type="button" data-action="remove-portrait" data-portrait-id="{{id}}" title="Убрать"><i class="fa-solid fa-trash"></i></button>
           </article>
         {{/each}}
       </div>
     {{else}}
-      <p class="vn-director-empty">Портреты игроков появятся автоматически при запуске сцены. NPC можно добавить выше.</p>
+      <p class="vn-director-empty">Добавьте игроков из назначенных им персонажей или создайте NPC вручную.</p>
     {{/if}}
   </section>
 
-  <section class="vn-director-section vn-director-load">
-    <label>Загрузить сохранённую сцену по ID</label>
-    <div class="vn-director-field-row">
-      <input name="scene-id" type="text" placeholder="ID сцены">
-      <button type="button" data-action="load-scene">Загрузить</button>
+  <details class="vn-director-library" open>
+    <summary><span><i class="fa-solid fa-clapperboard"></i> Заготовленные сцены</span><small>{{scenes.length}}</small></summary>
+    <div class="vn-director-library-body">
+      <div class="vn-director-field-row">
+        <input name="preset-name" type="text" placeholder="Название заготовки">
+        <button type="button" data-action="save-preset"><i class="fa-solid fa-plus"></i> Сохранить текущую</button>
+      </div>
+      {{#if hasScenes}}
+        <div class="vn-director-presets">
+          {{#each scenes}}
+            <article class="vn-director-preset">
+              {{#if hasBackground}}<img src="{{background}}" alt="">{{else}}<div class="vn-director-preset-empty"><i class="fa-solid fa-image"></i></div>{{/if}}
+              <div><strong>{{name}}</strong><small>{{portraitCount}} участников{{#if time}} · {{time}}{{/if}}</small></div>
+              <button type="button" data-action="load-preset" data-scene-id="{{id}}">Загрузить</button>
+            </article>
+          {{/each}}
+        </div>
+      {{else}}
+        <p class="vn-director-empty">Сохраните текущую композицию — фон, подпись и участники попадут в заготовку.</p>
+      {{/if}}
     </div>
-  </section>
+  </details>
+
+  <details class="vn-director-library" open>
+    <summary><span><i class="fa-solid fa-user-group"></i> Группы участников</span><small>{{groups.length}}</small></summary>
+    <div class="vn-director-library-body">
+      <div class="vn-director-field-row">
+        <input name="group-name" type="text" placeholder="Например: Игроки или Стража">
+        <button type="button" data-action="save-group"><i class="fa-solid fa-plus"></i> Создать из текущих</button>
+      </div>
+      {{#if hasGroups}}
+        <div class="vn-director-groups">
+          {{#each groups}}
+            <article class="vn-director-group">
+              <div><strong>{{name}}</strong><small>{{portraitCount}} участников</small></div>
+              <button type="button" data-action="apply-group" data-group-id="{{id}}">Добавить в сцену</button>
+            </article>
+          {{/each}}
+        </div>
+      {{else}}
+        <p class="vn-director-empty">Соберите участников текущей сцены и сохраните их как повторно используемую группу.</p>
+      {{/if}}
+    </div>
+  </details>
 </div>

@@ -27,6 +27,7 @@ test("scene commands change only the scene and increment revision", () => {
 test("stage starts inactive and portrait side can be changed", () => {
   const initial = createInitialState();
   assert.equal(initial.stage.active, false);
+  assert.equal(initial.stage.gmSpeakerPortraitId, null);
 
   const added = applySceneCommand(initial, createCommand("addPortrait", {
     name: "NPC",
@@ -36,11 +37,48 @@ test("stage starts inactive and portrait side can be changed", () => {
   const portraitId = added.scene.portraits[0].id;
   const updated = applySceneCommand(added, createCommand("updatePortrait", {
     portraitId,
-    side: "left"
+    side: "left",
+    flipped: true
   }, { userId: "gm", revision: 1 })).state;
 
   assert.equal(updated.scene.portraits[0].side, "left");
+  assert.equal(updated.scene.portraits[0].flipped, true);
   assert.equal(updated.revision, 2);
+});
+
+test("portrait batches add groups without duplicates and refresh avatar images", () => {
+  let state = createInitialState();
+  state = applySceneCommand(state, createCommand("addPortraits", {
+    portraits: [
+      { id: "user-a", profileId: "user-a", sourceUserId: "a", name: "А", image: "a-old.webp", side: "left" },
+      { id: "npc-b", profileId: "npc-b", name: "Б", image: "b.webp", side: "right" }
+    ]
+  }, { userId: "gm", revision: 0 })).state;
+  state = applySceneCommand(state, createCommand("addPortraits", {
+    portraits: [
+      { id: "user-a", profileId: "user-a", sourceUserId: "a", name: "А новый", image: "a-new.webp", side: "left" }
+    ]
+  }, { userId: "gm", revision: 1 })).state;
+
+  assert.equal(state.scene.portraits.length, 2);
+  assert.equal(state.scene.portraits.find((portrait) => portrait.id === "user-a").image, "a-new.webp");
+});
+
+test("new scene clears composition and selected GM speaker", () => {
+  let state = createInitialState();
+  state = applySceneCommand(state, createCommand("addPortrait", {
+    id: "npc",
+    name: "NPC",
+    image: "npc.webp"
+  }, { userId: "gm", revision: 0 })).state;
+  state.stage.gmSpeakerPortraitId = "npc";
+  state = applySceneCommand(state, createCommand("newScene", {
+    name: "Поле"
+  }, { userId: "gm", revision: 1 })).state;
+
+  assert.equal(state.scene.name, "Поле");
+  assert.equal(state.scene.portraits.length, 0);
+  assert.equal(state.stage.gmSpeakerPortraitId, null);
 });
 
 test("all main slots are bounded and overflow is transient", () => {
