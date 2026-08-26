@@ -145,6 +145,15 @@ test("speech changes do not change the overlay structure signature", () => {
   assert.equal(overlayStructureSignature(speaking, { hideUi: true }), before);
 });
 
+test("caption changes do not force a structural overlay redraw", () => {
+  let state = createInitialState();
+  const before = overlayStructureSignature(state, { hideUi: true });
+  state.scene.name = "Другая сцена";
+  state.scene.time = "ночь";
+  state.scene.weather = "дождь";
+  assert.equal(overlayStructureSignature(state, { hideUi: true }), before);
+});
+
 test("background is transparent by default and visibility toggles without structural redraw", () => {
   assert.equal(createSceneDefinition().backgroundVisible, false);
   assert.equal(createSceneDefinition({ background: "legacy.webp" }).backgroundVisible, true);

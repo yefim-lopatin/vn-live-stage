@@ -34,7 +34,20 @@ export class StageDirectorApplication extends HandlebarsApplicationMixin(Applica
   constructor(session, options = {}) {
     super(options);
     this.session = session;
-    this.unsubscribe = session.onChange(() => this.render());
+    this.unsubscribe = session.onChange(() => this._renderPreservingView());
+  }
+
+  async _renderPreservingView() {
+    if (!this.rendered) return this.render();
+    const content = this.element?.querySelector(".window-content") ?? this.element;
+    const bounds = this.element?.getBoundingClientRect?.();
+    const scrollTop = content?.scrollTop ?? 0;
+    await this.render();
+    const nextContent = this.element?.querySelector(".window-content") ?? this.element;
+    if (nextContent) nextContent.scrollTop = Math.min(scrollTop, nextContent.scrollHeight);
+    if (bounds && this.setPosition) {
+      this.setPosition({ left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height });
+    }
   }
 
   async _prepareContext() {
@@ -152,7 +165,7 @@ export class StageDirectorApplication extends HandlebarsApplicationMixin(Applica
     await this._setSceneDetails(root);
     await this.session.saveScene({ sceneId: makeId("scene"), name });
     ui.notifications?.info?.(`Сцена «${name}» добавлена в библиотеку`);
-    this.render();
+    this._renderPreservingView();
   }
 
   async _saveGroup(root) {
@@ -167,7 +180,7 @@ export class StageDirectorApplication extends HandlebarsApplicationMixin(Applica
       createdAt: Date.now()
     });
     ui.notifications?.info?.(`Группа «${name}» сохранена`);
-    this.render();
+    this._renderPreservingView();
   }
 
   _browse(inputName) {
@@ -219,20 +232,25 @@ export class StageOverlayController {
     const decorate = (portrait) => ({
       ...portrait,
       hasImage: Boolean(portrait.image),
-      speaking: activeSpeaking.has(portrait.id)
+      speaking: activeSpeaking.has(portrait.id),
+      ownedByCurrentUser: !game.user.isGM && (
+        portrait.profileId === `user-${game.user.id}` || portrait.sourceUserId === game.user.id
+      )
     });
     const portraits = allPortraits(state).map(decorate).sort((a, b) => a.slot - b.slot);
+    const leftPortraits = portraits.filter((portrait) => portrait.side !== "right");
+    const rightPortraits = portraits.filter((portrait) => portrait.side === "right");
     const context = {
       state,
       background: state.scene.background,
       backgroundVisible: Boolean(state.scene.background && state.scene.backgroundVisible),
-      leftPortraits: portraits.filter((portrait) => portrait.side !== "right"),
-      rightPortraits: portraits.filter((portrait) => portrait.side === "right"),
+      leftPortraits,
+      rightPortraits,
+      sideColumns: Math.max(leftPortraits.length, rightPortraits.length, 1),
       isGM: Boolean(game.user.isGM),
       isPreparing: phase === "preparing",
       isLive: phase === "live",
-      isSpeaking: Boolean(state.speaking[game.user.id]),
-      canSpeak: !game.user.isGM && this.session.canCurrentUserSpeak()
+      isSpeaking: Boolean(state.speaking[game.user.id])
     };
 
     const token = ++this.renderToken;
@@ -261,6 +279,14 @@ export class StageOverlayController {
     if (button) this._bindHoldButton(button);
     this.element?.querySelectorAll("[data-action='portrait-speak']").forEach((portraitButton) => {
       this._bindHoldButton(portraitButton, portraitButton.dataset.portraitId);
+    });
+    this.element?.querySelectorAll("[data-action='remove-portrait']").forEach((portraitButton) => {
+      portraitButton.addEventListener("click", () => {
+        this.session.dispatch({
+          type: "removePortrait",
+          payload: { portraitId: portraitButton.dataset.portraitId }
+        }).catch(notifyError);
+      });
     });
     this.element?.querySelector("[data-action='publish-stage']")?.addEventListener("click", () => {
       this.session.publishStage().catch(notifyError);
@@ -296,6 +322,13 @@ export class StageOverlayController {
 
   _updateDynamicState(state) {
     if (!this.element) return;
+    const captionName = this.element.querySelector("[data-vn-caption-name]");
+    if (captionName) captionName.textContent = state.scene.name;
+    const captionMeta = this.element.querySelector("[data-vn-caption-meta]");
+    if (captionMeta) {
+      captionMeta.textContent = [state.scene.time, state.scene.weather].filter(Boolean).join(" · ");
+      captionMeta.hidden = !captionMeta.textContent;
+    }
     const backgroundVisible = Boolean(state.scene.background && state.scene.backgroundVisible);
     this.element.querySelector(".vn-cinematic-background")?.classList.toggle("is-hidden", !backgroundVisible);
     const backgroundButton = this.element.querySelector("[data-action='toggle-background']");
@@ -308,8 +341,14 @@ export class StageOverlayController {
       if (label) label.textContent = backgroundVisible ? "Скрыть фон" : "Показать фон";
     }
     const activePortraits = speakingIds(state);
+    const portraits = new Map(allPortraits(state).map((portrait) => [portrait.id, portrait]));
     this.element.querySelectorAll("[data-portrait-id]").forEach((element) => {
       const portraitId = element.dataset.portraitId;
+      const portrait = portraits.get(portraitId);
+      const name = element.querySelector("[data-portrait-name]");
+      if (name && portrait) name.textContent = portrait.name;
+      const image = element.querySelector("[data-portrait-image]");
+      if (image && portrait) image.alt = portrait.name;
       if (element.matches(".vn-cinematic-portrait")) {
         element.classList.toggle("is-speaking", activePortraits.has(portraitId));
       }
@@ -317,16 +356,11 @@ export class StageOverlayController {
         const active = activePortraits.has(portraitId);
         element.classList.toggle("is-active", active);
         const label = element.querySelector("span");
-        if (label) label.textContent = active ? "Говорю…" : "Говорить";
+        if (label) label.textContent = active
+          ? "Говорю…"
+          : (element.dataset.playerSpeak === "true" ? "Зажать, чтобы говорить" : "Говорить");
       }
     });
-    const playerButton = this.element.querySelector("[data-action='speak']");
-    if (playerButton) {
-      const active = Boolean(state.speaking[game.user.id]);
-      playerButton.classList.toggle("is-active", active);
-      const label = playerButton.querySelector("span");
-      if (label) label.textContent = active ? "Говорю…" : "Удерживайте, чтобы говорить";
-    }
   }
 
   _armSpeechRelease() {

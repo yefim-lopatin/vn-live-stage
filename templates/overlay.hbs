@@ -5,36 +5,43 @@
   <div class="vn-cinematic-bar vn-cinematic-bar-bottom"></div>
 
   <header class="vn-cinematic-caption">
-    <span>{{state.scene.name}}</span>
-    {{#if state.scene.time}}<small>{{state.scene.time}}{{#if state.scene.weather}} · {{state.scene.weather}}{{/if}}</small>{{/if}}
+    <span data-vn-caption-name>{{state.scene.name}}</span>
+    <small data-vn-caption-meta hidden>{{state.scene.time}}{{#if state.scene.weather}} · {{state.scene.weather}}{{/if}}</small>
   </header>
 
-  <section class="vn-cinematic-side vn-cinematic-left" aria-label="Персонажи игроков">
+  <section class="vn-cinematic-side vn-cinematic-left" style="--vn-side-columns: {{sideColumns}}" aria-label="Персонажи игроков">
     {{#each leftPortraits}}
       <figure class="vn-cinematic-portrait {{#if speaking}}is-speaking{{/if}} {{#if flipped}}is-flipped{{/if}} {{#if overflow}}is-overflow{{/if}}" data-portrait-id="{{id}}" style="--vn-slot: {{slot}}">
-        {{#if hasImage}}<img src="{{image}}" alt="{{name}}">{{else}}<div class="vn-cinematic-placeholder"><i class="fa-solid fa-user"></i></div>{{/if}}
-        <figcaption>{{name}}</figcaption>
-        {{#if ../isGM}}<button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Говорить</span></button>{{/if}}
+        {{#if hasImage}}<img data-portrait-image src="{{image}}" alt="{{name}}">{{else}}<div class="vn-cinematic-placeholder"><i class="fa-solid fa-user"></i></div>{{/if}}
+        <figcaption data-portrait-name>{{name}}</figcaption>
+        <div class="vn-cinematic-portrait-actions">
+          {{#if ../isGM}}
+            <button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Говорить</span></button>
+            <button type="button" class="vn-cinematic-portrait-remove" data-action="remove-portrait" data-portrait-id="{{id}}" title="Убрать персонажа"><i class="fa-solid fa-trash"></i></button>
+          {{else}}
+            {{#if ownedByCurrentUser}}<button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-player-speak="true" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Зажать, чтобы говорить</span></button>{{/if}}
+          {{/if}}
+        </div>
       </figure>
     {{/each}}
   </section>
 
-  <section class="vn-cinematic-side vn-cinematic-right" aria-label="Неигровые персонажи">
+  <section class="vn-cinematic-side vn-cinematic-right" style="--vn-side-columns: {{sideColumns}}" aria-label="Неигровые персонажи">
     {{#each rightPortraits}}
       <figure class="vn-cinematic-portrait {{#if speaking}}is-speaking{{/if}} {{#if flipped}}is-flipped{{/if}} {{#if overflow}}is-overflow{{/if}}" data-portrait-id="{{id}}" style="--vn-slot: {{slot}}">
-        {{#if hasImage}}<img src="{{image}}" alt="{{name}}">{{else}}<div class="vn-cinematic-placeholder"><i class="fa-solid fa-user"></i></div>{{/if}}
-        <figcaption>{{name}}</figcaption>
-        {{#if ../isGM}}<button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Говорить</span></button>{{/if}}
+        {{#if hasImage}}<img data-portrait-image src="{{image}}" alt="{{name}}">{{else}}<div class="vn-cinematic-placeholder"><i class="fa-solid fa-user"></i></div>{{/if}}
+        <figcaption data-portrait-name>{{name}}</figcaption>
+        <div class="vn-cinematic-portrait-actions">
+          {{#if ../isGM}}
+            <button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Говорить</span></button>
+            <button type="button" class="vn-cinematic-portrait-remove" data-action="remove-portrait" data-portrait-id="{{id}}" title="Убрать персонажа"><i class="fa-solid fa-trash"></i></button>
+          {{else}}
+            {{#if ownedByCurrentUser}}<button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-player-speak="true" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Зажать, чтобы говорить</span></button>{{/if}}
+          {{/if}}
+        </div>
       </figure>
     {{/each}}
   </section>
-
-  {{#unless isGM}}
-    <button type="button" class="vn-cinematic-speak {{#if isSpeaking}}is-active{{/if}}" data-action="speak" {{#unless canSpeak}}disabled{{/unless}}>
-      <i class="fa-solid fa-comment-dots"></i>
-      <span>{{#if canSpeak}}{{#if isSpeaking}}Говорю…{{else}}Удерживайте, чтобы говорить{{/if}}{{else}}Персонаж не добавлен в сцену{{/if}}</span>
-    </button>
-  {{/unless}}
 
   {{#if isGM}}
     <div class="vn-cinematic-gm-actions">

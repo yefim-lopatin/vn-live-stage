@@ -363,10 +363,18 @@ export class LiveStageSession {
   }
 
   async _requestSnapshot() {
-    const response = await this._dispatchSocket({ kind: "sync", userId: game.user.id });
-    if (response?.state) {
-      this.state = clone(response.state);
-      if (!this._speechEnabledForCurrentUser() || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const response = await this._dispatchSocket({ kind: "sync", userId: game.user.id });
+        if (response?.state) {
+          this.state = clone(response.state);
+          if (!this._speechEnabledForCurrentUser() || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
+          return;
+        }
+      } catch (_error) {
+        // Повторная попытка нужна, если игрок подключился раньше GM-пульта.
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
     }
   }
 
@@ -400,6 +408,14 @@ export class LiveStageSession {
     };
     const hookId = Hooks.on("updateUser", onUser);
     this.cleanup.push(() => Hooks.off("updateUser", hookId));
+    const onSetting = async (setting) => {
+      if (game.user.isGM || setting?.namespace !== MODULE_ID || setting?.key !== "liveState") return;
+      this.state = await readLiveState();
+      if (!this._speechEnabledForCurrentUser() || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
+      this._emit();
+    };
+    const settingHookId = Hooks.on("updateSetting", onSetting);
+    this.cleanup.push(() => Hooks.off("updateSetting", settingHookId));
     const onBlur = () => this.speaking && this.stopSpeaking().catch(() => {});
     window.addEventListener("blur", onBlur);
     document.addEventListener("visibilitychange", onBlur);

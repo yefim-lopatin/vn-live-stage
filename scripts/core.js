@@ -321,10 +321,34 @@ export function shouldDisplayStage(stage, isGM = false) {
 }
 
 export function overlayStructureSignature(state, { hideUi = false } = {}) {
-  const { backgroundVisible: _backgroundVisible, ...scene } = state.scene;
+  const scene = {
+    id: state.scene.id,
+    background: state.scene.background,
+    portraits: state.scene.portraits.map((portrait) => ({
+      id: portrait.id,
+      profileId: portrait.profileId,
+      sourceUserId: portrait.sourceUserId,
+      image: portrait.image,
+      slot: portrait.slot,
+      side: portrait.side,
+      flipped: portrait.flipped,
+      hidden: portrait.hidden
+    }))
+  };
+  const overflow = state.overflow.map((portrait) => ({
+    id: portrait.id,
+    profileId: portrait.profileId,
+    sourceUserId: portrait.sourceUserId,
+    image: portrait.image,
+    slot: portrait.slot,
+    side: portrait.side,
+    flipped: portrait.flipped,
+    hidden: portrait.hidden,
+    overflow: portrait.overflow
+  }));
   return JSON.stringify({
     scene,
-    overflow: state.overflow,
+    overflow,
     phase: getStagePhase(state.stage),
     hideUi: Boolean(hideUi)
   });
