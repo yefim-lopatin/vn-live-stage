@@ -10,7 +10,7 @@ test("left and right portrait grids use the same automatic column count", () => 
   assert.equal((template.match(/--vn-side-columns: \{\{sideColumns\}\}/g) ?? []).length, 2);
   assert.doesNotMatch(template, /\{\{leftColumns\}\}|\{\{rightColumns\}\}/);
   assert.match(styles, /\.vn-cinematic-left\s*\{[\s\S]*?left:\s*0;/);
-  assert.match(styles, /\.vn-cinematic-right\s*\{[\s\S]*?right:\s*0;[\s\S]*?direction:\s*rtl;/);
+  assert.match(styles, /\.vn-cinematic-right\s*\{[\s\S]*?right:\s*0;[\s\S]*?direction:\s*rtl;[\s\S]*?justify-items:\s*start;/);
   assert.match(styles, /\.vn-cinematic-right \.vn-cinematic-portrait\s*\{[\s\S]*?direction:\s*ltr;/);
   assert.match(application, /sideColumns:\s*Math\.max\(leftPortraits\.length,\s*rightPortraits\.length,\s*1\)/);
 });

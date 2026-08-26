@@ -511,7 +511,7 @@
 .vn-cinematic-right {
   right: 0;
   direction: rtl;
-  justify-items: end;
+  justify-items: start;
 }
 
 .vn-cinematic-right .vn-cinematic-portrait {
