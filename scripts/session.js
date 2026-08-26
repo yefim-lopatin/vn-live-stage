@@ -36,6 +36,7 @@ export class LiveStageSession {
       await this._broadcast();
     } else {
       await this._requestSnapshot();
+      await this._syncFromStorage();
     }
     this._emit();
     return this;
@@ -378,6 +379,11 @@ export class LiveStageSession {
     }
   }
 
+  async _syncFromStorage() {
+    this.state = await readLiveState();
+    if (!this._speechEnabledForCurrentUser() || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
+  }
+
   async _dispatchSocket(message) {
     const dispatch = globalThis.foundry?.helpers?.SocketInterface?.dispatch;
     if (dispatch) return dispatch(SOCKET_NAME, message);
@@ -410,8 +416,7 @@ export class LiveStageSession {
     this.cleanup.push(() => Hooks.off("updateUser", hookId));
     const onSetting = async (setting) => {
       if (game.user.isGM || setting?.key !== `${MODULE_ID}.liveState`) return;
-      this.state = await readLiveState();
-      if (!this._speechEnabledForCurrentUser() || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
+      await this._syncFromStorage();
       this._emit();
     };
     const settingHookId = Hooks.on("updateSetting", onSetting);

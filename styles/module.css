@@ -594,7 +594,8 @@
   touch-action: none;
 }
 
-.vn-cinematic-portrait-remove {
+.vn-cinematic-portrait-remove,
+.vn-cinematic-portrait-flip {
   display: inline-grid;
   flex: 0 0 38px;
   place-items: center;
@@ -609,6 +610,10 @@
 
 .vn-cinematic-portrait-remove:hover {
   background: rgba(107, 39, 43, .96);
+}
+
+.vn-cinematic-portrait-flip:hover {
+  background: rgba(69, 53, 36, .96);
 }
 
 .vn-cinematic-portrait-speak:hover {

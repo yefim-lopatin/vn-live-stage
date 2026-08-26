@@ -66,7 +66,8 @@
         {{#each portraits}}
           <article class="vn-director-cast-item">
             {{#if image}}<img src="{{image}}" alt="">{{else}}<div class="vn-director-avatar"><i class="fa-solid fa-user"></i></div>{{/if}}
-            <div><strong>{{name}}</strong><small>{{#if isLeft}}Слева · игрок{{else}}Справа · NPC{{/if}}{{#if flipped}} · отражён{{/if}}</small></div>
+            <div><strong>{{name}}</strong><small>{{#if isNpc}}{{#if isLeft}}Слева · NPC{{else}}Справа · NPC{{/if}}{{else}}Игрок{{/if}}{{#if flipped}} · отражён{{/if}}</small></div>
+            {{#if isNpc}}<button type="button" data-action="toggle-portrait-side" data-portrait-id="{{id}}" data-side="{{side}}" title="Перенести {{#if isLeft}}вправо{{else}}влево{{/if}}"><i class="fa-solid fa-right-left"></i></button>{{/if}}
             <button type="button" data-action="flip-portrait" data-portrait-id="{{id}}" data-flipped="{{flipped}}" title="Отразить по горизонтали"><i class="fa-solid fa-arrows-left-right"></i></button>
             <button type="button" data-action="remove-portrait" data-portrait-id="{{id}}" title="Убрать"><i class="fa-solid fa-trash"></i></button>
           </article>

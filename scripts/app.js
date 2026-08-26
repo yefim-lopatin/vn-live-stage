@@ -57,7 +57,8 @@ export class StageDirectorApplication extends HandlebarsApplicationMixin(Applica
       .sort((a, b) => a.slot - b.slot)
       .map((portrait) => ({
         ...portrait,
-        isLeft: portrait.side === "left"
+        isLeft: portrait.side === "left",
+        isNpc: !portrait.sourceUserId && !String(portrait.profileId ?? "").startsWith("user-")
       }));
     const scenes = listScenes().map((scene) => ({
       ...scene,
@@ -138,6 +139,16 @@ export class StageDirectorApplication extends HandlebarsApplicationMixin(Applica
       run(this.session.dispatch({
         type: "updatePortrait",
         payload: { portraitId: button.dataset.portraitId, flipped: button.dataset.flipped !== "true" }
+      }));
+    }));
+
+    root.querySelectorAll("[data-action='toggle-portrait-side']").forEach((button) => button.addEventListener("click", () => {
+      run(this.session.dispatch({
+        type: "updatePortrait",
+        payload: {
+          portraitId: button.dataset.portraitId,
+          side: button.dataset.side === "left" ? "right" : "left"
+        }
       }));
     }));
 
@@ -277,6 +288,17 @@ export class StageOverlayController {
         this.session.dispatch({
           type: "removePortrait",
           payload: { portraitId: portraitButton.dataset.portraitId }
+        }).catch(notifyError);
+      });
+    });
+    this.element?.querySelectorAll("[data-action='flip-portrait']").forEach((portraitButton) => {
+      portraitButton.addEventListener("click", () => {
+        this.session.dispatch({
+          type: "updatePortrait",
+          payload: {
+            portraitId: portraitButton.dataset.portraitId,
+            flipped: portraitButton.dataset.flipped !== "true"
+          }
         }).catch(notifyError);
       });
     });

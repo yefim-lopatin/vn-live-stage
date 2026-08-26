@@ -17,6 +17,7 @@
         <div class="vn-cinematic-portrait-actions">
           {{#if ../isGM}}
             <button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Говорить</span></button>
+            <button type="button" class="vn-cinematic-portrait-flip" data-action="flip-portrait" data-portrait-id="{{id}}" data-flipped="{{flipped}}" title="Отразить портрет"><i class="fa-solid fa-arrows-left-right"></i></button>
             <button type="button" class="vn-cinematic-portrait-remove" data-action="remove-portrait" data-portrait-id="{{id}}" title="Убрать персонажа"><i class="fa-solid fa-trash"></i></button>
           {{else}}
             {{#if ownedByCurrentUser}}<button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-player-speak="true" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Зажать, чтобы говорить</span></button>{{/if}}
@@ -34,6 +35,7 @@
         <div class="vn-cinematic-portrait-actions">
           {{#if ../isGM}}
             <button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Говорить</span></button>
+            <button type="button" class="vn-cinematic-portrait-flip" data-action="flip-portrait" data-portrait-id="{{id}}" data-flipped="{{flipped}}" title="Отразить портрет"><i class="fa-solid fa-arrows-left-right"></i></button>
             <button type="button" class="vn-cinematic-portrait-remove" data-action="remove-portrait" data-portrait-id="{{id}}" title="Убрать персонажа"><i class="fa-solid fa-trash"></i></button>
           {{else}}
             {{#if ownedByCurrentUser}}<button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-player-speak="true" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Зажать, чтобы говорить</span></button>{{/if}}

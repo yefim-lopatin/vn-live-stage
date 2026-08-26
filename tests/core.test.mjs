@@ -27,7 +27,7 @@ test("scene commands change only the scene and increment revision", () => {
   assert.equal(result.event.after.portraits.length, 1);
 });
 
-test("stage starts inactive and keeps players left and NPCs right", () => {
+test("stage starts inactive and the director can move an NPC to either side", () => {
   const initial = createInitialState();
   assert.equal(initial.stage.phase, "inactive");
   assert.equal(initial.stage.active, false);
@@ -44,7 +44,7 @@ test("stage starts inactive and keeps players left and NPCs right", () => {
     flipped: true
   }, { userId: "gm", revision: 1 })).state;
 
-  assert.equal(updated.scene.portraits[0].side, "right");
+  assert.equal(updated.scene.portraits[0].side, "left");
   assert.equal(updated.scene.portraits[0].flipped, true);
   assert.equal(updated.revision, 2);
 
