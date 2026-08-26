@@ -27,7 +27,7 @@ test("scene commands change only the scene and increment revision", () => {
   assert.equal(result.event.after.portraits.length, 1);
 });
 
-test("stage starts inactive and the director can move an NPC to either side", () => {
+test("stage starts inactive and the director can move any portrait to either side", () => {
   const initial = createInitialState();
   assert.equal(initial.stage.phase, "inactive");
   assert.equal(initial.stage.active, false);
@@ -54,7 +54,12 @@ test("stage starts inactive and the director can move an NPC to either side", ()
     sourceUserId: "player",
     side: "right"
   }, { userId: "gm", revision: 2 })).state;
-  assert.equal(player.scene.portraits[1].side, "left");
+  assert.equal(player.scene.portraits[1].side, "right");
+  const movedPlayer = applySceneCommand(player, createCommand("updatePortrait", {
+    portraitId: player.scene.portraits[1].id,
+    side: "left"
+  }, { userId: "gm", revision: 3 })).state;
+  assert.equal(movedPlayer.scene.portraits[1].side, "left");
 });
 
 test("portrait batches add groups without duplicates and refresh avatar images", () => {
@@ -179,5 +184,25 @@ test("background is transparent by default and visibility toggles without struct
     visible: false
   }, { userId: "gm", revision: 1 })).state;
   assert.equal(state.scene.backgroundVisible, false);
+  assert.equal(overlayStructureSignature(state, { hideUi: true }), before);
+});
+
+test("portrait side and reflection change without a structural overlay redraw", () => {
+  let state = createInitialState();
+  state = applySceneCommand(state, createCommand("addPortrait", {
+    id: "movable",
+    name: "Персонаж",
+    image: "portrait.webp",
+    side: "left"
+  }, { userId: "gm", revision: 0 })).state;
+  const before = overlayStructureSignature(state, { hideUi: true });
+  state = applySceneCommand(state, createCommand("updatePortrait", {
+    portraitId: "movable",
+    side: "right",
+    flipped: true
+  }, { userId: "gm", revision: 1 })).state;
+
+  assert.equal(state.scene.portraits[0].side, "right");
+  assert.equal(state.scene.portraits[0].flipped, true);
   assert.equal(overlayStructureSignature(state, { hideUi: true }), before);
 });

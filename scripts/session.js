@@ -333,7 +333,7 @@ export class LiveStageSession {
         ...current,
         id: portrait.id ?? current.id,
         profileId: portrait.profileId ?? current.profileId,
-        side: "left",
+        side: ["left", "right"].includes(portrait.side) ? portrait.side : "left",
         flipped: Boolean(portrait.flipped)
       };
     });

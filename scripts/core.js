@@ -57,7 +57,7 @@ function normalizePortrait(portrait = {}, index = 0) {
     name: String(portrait.name ?? "Безымянный персонаж"),
     image: portrait.image ?? "",
     slot: Number.isInteger(portrait.slot) ? portrait.slot : index,
-    side: isPlayerPortrait ? "left" : (["left", "right"].includes(portrait.side) ? portrait.side : defaultSide),
+    side: ["left", "right"].includes(portrait.side) ? portrait.side : defaultSide,
     flipped: Boolean(portrait.flipped),
     position: portrait.position ?? null,
     hidden: Boolean(portrait.hidden)
@@ -168,9 +168,7 @@ export function applySceneCommand(inputState, command) {
           existing.image = portrait.image ?? existing.image;
           existing.sourceUserId = portrait.sourceUserId ?? existing.sourceUserId ?? null;
           existing.sourceActorId = portrait.sourceActorId ?? existing.sourceActorId ?? null;
-          const isPlayerPortrait = existing.sourceUserId || String(existing.profileId ?? "").startsWith("user-");
-          if (isPlayerPortrait) existing.side = "left";
-          else if (["left", "right"].includes(portrait.side)) existing.side = portrait.side;
+          if (["left", "right"].includes(portrait.side)) existing.side = portrait.side;
           continue;
         }
         if (state.scene.portraits.length >= MAX_SLOTS) break;
@@ -204,9 +202,7 @@ export function applySceneCommand(inputState, command) {
       const portrait = requirePortrait(state.scene, payload.portraitId);
       if (payload.name !== undefined) portrait.name = String(payload.name || "Безымянный персонаж");
       if (payload.image !== undefined) portrait.image = payload.image ?? "";
-      const isPlayerPortrait = portrait.sourceUserId || String(portrait.profileId ?? "").startsWith("user-");
-      if (isPlayerPortrait) portrait.side = "left";
-      else if (["left", "right"].includes(payload.side)) portrait.side = payload.side;
+      if (["left", "right"].includes(payload.side)) portrait.side = payload.side;
       if (payload.flipped !== undefined) portrait.flipped = Boolean(payload.flipped);
       break;
     }
@@ -363,8 +359,6 @@ export function overlayStructureSignature(state, {
       sourceUserId: portrait.sourceUserId,
       image: portrait.image,
       slot: portrait.slot,
-      side: portrait.side,
-      flipped: portrait.flipped,
       hidden: portrait.hidden
     }))
   };
@@ -374,8 +368,6 @@ export function overlayStructureSignature(state, {
     sourceUserId: portrait.sourceUserId,
     image: portrait.image,
     slot: portrait.slot,
-    side: portrait.side,
-    flipped: portrait.flipped,
     hidden: portrait.hidden,
     overflow: portrait.overflow
   }));

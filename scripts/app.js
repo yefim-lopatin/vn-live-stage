@@ -279,6 +279,7 @@ export class StageOverlayController {
     const decorate = (portrait) => ({
       ...portrait,
       hasImage: Boolean(portrait.image),
+      isLeft: portrait.side !== "right",
       speaking: activeSpeaking.has(portrait.id),
       ownedByCurrentUser: !game.user.isGM && (
         portrait.profileId === `user-${game.user.id}` || portrait.sourceUserId === game.user.id
@@ -293,8 +294,7 @@ export class StageOverlayController {
       backgroundVisible: Boolean(state.scene.background && state.scene.backgroundVisible),
       leftPortraits,
       rightPortraits,
-      leftColumns: Math.max(leftPortraits.length, 1),
-      rightColumns: Math.max(rightPortraits.length, 1),
+      sideColumns: Math.max(leftPortraits.length, rightPortraits.length, 1),
       isGM: Boolean(game.user.isGM),
       isPreparing: phase === "preparing",
       isLive: phase === "live",
@@ -350,6 +350,17 @@ export class StageOverlayController {
           payload: {
             portraitId: portraitButton.dataset.portraitId,
             flipped: portraitButton.dataset.flipped !== "true"
+          }
+        }).catch(notifyError);
+      });
+    });
+    this.element?.querySelectorAll("[data-action='toggle-portrait-side']").forEach((portraitButton) => {
+      portraitButton.addEventListener("click", () => {
+        this.session.dispatch({
+          type: "updatePortrait",
+          payload: {
+            portraitId: portraitButton.dataset.portraitId,
+            side: portraitButton.dataset.side === "left" ? "right" : "left"
           }
         }).catch(notifyError);
       });
@@ -424,6 +435,35 @@ export class StageOverlayController {
     }
     const activePortraits = speakingIds(state);
     const portraits = new Map(allPortraits(state).map((portrait) => [portrait.id, portrait]));
+    const orderedPortraits = [...portraits.values()].sort((a, b) => a.slot - b.slot);
+    const leftPortraits = orderedPortraits.filter((portrait) => portrait.side !== "right");
+    const rightPortraits = orderedPortraits.filter((portrait) => portrait.side === "right");
+    const sideColumns = Math.max(leftPortraits.length, rightPortraits.length, 1);
+    const leftSide = this.element.querySelector(".vn-cinematic-left");
+    const rightSide = this.element.querySelector(".vn-cinematic-right");
+    leftSide?.style.setProperty("--vn-side-columns", sideColumns);
+    rightSide?.style.setProperty("--vn-side-columns", sideColumns);
+    const figures = new Map(
+      [...this.element.querySelectorAll(".vn-cinematic-portrait[data-portrait-id]")]
+        .map((element) => [element.dataset.portraitId, element])
+    );
+    for (const portrait of orderedPortraits) {
+      const element = figures.get(portrait.id);
+      if (!element) continue;
+      const targetSide = portrait.side === "right" ? rightSide : leftSide;
+      if (targetSide && element.parentElement !== targetSide) targetSide.append(element);
+      element.classList.toggle("is-flipped", Boolean(portrait.flipped));
+      const flipButton = element.querySelector("[data-action='flip-portrait']");
+      if (flipButton) flipButton.dataset.flipped = String(Boolean(portrait.flipped));
+      const sideButton = element.querySelector("[data-action='toggle-portrait-side']");
+      if (sideButton) {
+        const isLeft = portrait.side !== "right";
+        sideButton.dataset.side = isLeft ? "left" : "right";
+        sideButton.title = isLeft ? "Перенести вправо" : "Перенести влево";
+        const icon = sideButton.querySelector("i");
+        if (icon) icon.className = `fa-solid ${isLeft ? "fa-arrow-right" : "fa-arrow-left"}`;
+      }
+    }
     this.element.querySelectorAll("[data-portrait-id]").forEach((element) => {
       const portraitId = element.dataset.portraitId;
       const portrait = portraits.get(portraitId);
