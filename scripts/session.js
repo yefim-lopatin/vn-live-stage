@@ -35,8 +35,7 @@ export class LiveStageSession {
       this._startHeartbeatMonitor();
       await this._broadcast();
     } else {
-      await this._requestSnapshot();
-      await this._syncFromStorage();
+      this._requestSnapshot();
     }
     this._emit();
     return this;
@@ -342,8 +341,9 @@ export class LiveStageSession {
 
   async _receive(message, respond) {
     if (!message?.kind) return;
-    if (message.kind === "snapshot") {
-      if (!game.user.isGM && message.state) {
+    if (["snapshot", "stage-show", "stage-state"].includes(message.kind)) {
+      const isTarget = !message.targetUserId || message.targetUserId === game.user.id;
+      if (!game.user.isGM && isTarget && message.state) {
         this.state = clone(message.state);
         if (!this._speechEnabledForCurrentUser() || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
         this._emit();
@@ -351,7 +351,7 @@ export class LiveStageSession {
       return;
     }
     if (message.kind === "sync") {
-      if (game.user.isGM) respond?.({ ok: true, state: this.getState() });
+      if (game.user.isGM) await this._broadcast({ targetUserId: message.userId });
       return;
     }
     if (message.kind !== "command" || !game.user.isGM) return;
@@ -363,20 +363,8 @@ export class LiveStageSession {
     }
   }
 
-  async _requestSnapshot() {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        const response = await this._dispatchSocket({ kind: "sync", userId: game.user.id });
-        if (response?.state) {
-          this.state = clone(response.state);
-          if (!this._speechEnabledForCurrentUser() || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
-          return;
-        }
-      } catch (_error) {
-        // Повторная попытка нужна, если игрок подключился раньше GM-пульта.
-      }
-      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
-    }
+  _requestSnapshot() {
+    game.socket.emit(SOCKET_NAME, { kind: "sync", userId: game.user.id });
   }
 
   async _syncFromStorage() {
@@ -386,16 +374,17 @@ export class LiveStageSession {
 
   async _dispatchSocket(message) {
     const dispatch = globalThis.foundry?.helpers?.SocketInterface?.dispatch;
-    if (dispatch) {
-      const response = await dispatch(SOCKET_NAME, message);
-      if (response?.error) throw response.error;
-      return response?.data ?? response;
-    }
+    if (dispatch) return dispatch(SOCKET_NAME, message);
     return new Promise((resolve, reject) => game.socket.emit(SOCKET_NAME, message, (response) => response?.ok ? resolve(response) : reject(new Error(response?.error ?? "Socket error"))));
   }
 
-  async _broadcast() {
-    game.socket.emit(SOCKET_NAME, { kind: "snapshot", state: this.getState() });
+  async _broadcast({ targetUserId = null } = {}) {
+    const state = this.getState();
+    game.socket.emit(SOCKET_NAME, {
+      kind: state.stage?.phase === "live" ? "stage-show" : "stage-state",
+      targetUserId,
+      state
+    });
   }
 
   _startHeartbeatMonitor() {
