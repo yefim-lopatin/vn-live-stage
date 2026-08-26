@@ -297,7 +297,7 @@ export class LiveStageSession {
         ...current,
         id: portrait.id ?? current.id,
         profileId: portrait.profileId ?? current.profileId,
-        side: portrait.side === "right" ? "right" : "left",
+        side: "left",
         flipped: Boolean(portrait.flipped)
       };
     });
@@ -409,7 +409,7 @@ export class LiveStageSession {
     const hookId = Hooks.on("updateUser", onUser);
     this.cleanup.push(() => Hooks.off("updateUser", hookId));
     const onSetting = async (setting) => {
-      if (game.user.isGM || setting?.namespace !== MODULE_ID || setting?.key !== "liveState") return;
+      if (game.user.isGM || setting?.key !== `${MODULE_ID}.liveState`) return;
       this.state = await readLiveState();
       if (!this._speechEnabledForCurrentUser() || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
       this._emit();

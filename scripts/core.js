@@ -44,6 +44,9 @@ export function makeId(prefix = "id") {
 }
 
 function normalizePortrait(portrait = {}, index = 0) {
+  const isPlayerPortrait = Boolean(
+    portrait.sourceUserId || String(portrait.profileId ?? "").startsWith("user-")
+  );
   return {
     id: portrait.id ?? makeId("portrait"),
     profileId: portrait.profileId ?? null,
@@ -52,7 +55,7 @@ function normalizePortrait(portrait = {}, index = 0) {
     name: String(portrait.name ?? "Безымянный персонаж"),
     image: portrait.image ?? "",
     slot: Number.isInteger(portrait.slot) ? portrait.slot : index,
-    side: portrait.side === "left" ? "left" : "right",
+    side: isPlayerPortrait ? "left" : "right",
     flipped: Boolean(portrait.flipped),
     position: portrait.position ?? null,
     hidden: Boolean(portrait.hidden)
@@ -163,6 +166,7 @@ export function applySceneCommand(inputState, command) {
           existing.image = portrait.image ?? existing.image;
           existing.sourceUserId = portrait.sourceUserId ?? existing.sourceUserId ?? null;
           existing.sourceActorId = portrait.sourceActorId ?? existing.sourceActorId ?? null;
+          existing.side = (existing.sourceUserId || String(existing.profileId ?? "").startsWith("user-")) ? "left" : "right";
           continue;
         }
         if (state.scene.portraits.length >= MAX_SLOTS) break;
@@ -196,7 +200,7 @@ export function applySceneCommand(inputState, command) {
       const portrait = requirePortrait(state.scene, payload.portraitId);
       if (payload.name !== undefined) portrait.name = String(payload.name || "Безымянный персонаж");
       if (payload.image !== undefined) portrait.image = payload.image ?? "";
-      if (payload.side !== undefined) portrait.side = payload.side === "left" ? "left" : "right";
+      portrait.side = (portrait.sourceUserId || String(portrait.profileId ?? "").startsWith("user-")) ? "left" : "right";
       if (payload.flipped !== undefined) portrait.flipped = Boolean(payload.flipped);
       break;
     }

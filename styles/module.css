@@ -225,7 +225,7 @@
 
 .vn-director-cast-item {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) repeat(3, 32px);
+  grid-template-columns: 42px minmax(0, 1fr) repeat(2, 32px);
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -477,9 +477,9 @@
   display: grid;
   grid-template-columns: repeat(var(--vn-side-columns, 1), minmax(0, 1fr));
   align-items: flex-end;
-  gap: clamp(4px, 1vw, 18px);
+  gap: clamp(2px, .4vw, 7px);
   width: 48.5vw;
-  padding: 0 1vw;
+  padding: 0 .6vw;
   pointer-events: none;
 }
 

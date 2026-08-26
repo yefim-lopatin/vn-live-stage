@@ -115,8 +115,7 @@ export class StageDirectorApplication extends HandlebarsApplicationMixin(Applica
     root.querySelector("[data-action='add-portrait']")?.addEventListener("click", () => {
       const name = root.querySelector("[name='portrait-name']")?.value?.trim() ?? "";
       const image = root.querySelector("[name='portrait-image']")?.value?.trim() ?? "";
-      const side = root.querySelector("[name='portrait-side']")?.value === "left" ? "left" : "right";
-      run(this.session.dispatch({ type: "addPortrait", payload: { name, image, side } }));
+      run(this.session.dispatch({ type: "addPortrait", payload: { name, image } }));
     });
 
     root.querySelector("[data-action='save-preset']")?.addEventListener("click", () => run(this._savePreset(root)));
@@ -133,13 +132,6 @@ export class StageDirectorApplication extends HandlebarsApplicationMixin(Applica
 
     root.querySelectorAll("[data-action='remove-portrait']").forEach((button) => button.addEventListener("click", () => {
       run(this.session.dispatch({ type: "removePortrait", payload: { portraitId: button.dataset.portraitId } }));
-    }));
-
-    root.querySelectorAll("[data-action='switch-side']").forEach((button) => button.addEventListener("click", () => {
-      run(this.session.dispatch({
-        type: "updatePortrait",
-        payload: { portraitId: button.dataset.portraitId, side: button.dataset.side }
-      }));
     }));
 
     root.querySelectorAll("[data-action='flip-portrait']").forEach((button) => button.addEventListener("click", () => {

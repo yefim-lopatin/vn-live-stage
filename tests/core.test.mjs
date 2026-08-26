@@ -27,7 +27,7 @@ test("scene commands change only the scene and increment revision", () => {
   assert.equal(result.event.after.portraits.length, 1);
 });
 
-test("stage starts inactive and portrait side can be changed", () => {
+test("stage starts inactive and keeps players left and NPCs right", () => {
   const initial = createInitialState();
   assert.equal(initial.stage.phase, "inactive");
   assert.equal(initial.stage.active, false);
@@ -44,9 +44,17 @@ test("stage starts inactive and portrait side can be changed", () => {
     flipped: true
   }, { userId: "gm", revision: 1 })).state;
 
-  assert.equal(updated.scene.portraits[0].side, "left");
+  assert.equal(updated.scene.portraits[0].side, "right");
   assert.equal(updated.scene.portraits[0].flipped, true);
   assert.equal(updated.revision, 2);
+
+  const player = applySceneCommand(updated, createCommand("addPortrait", {
+    name: "Игрок",
+    image: "player.webp",
+    sourceUserId: "player",
+    side: "right"
+  }, { userId: "gm", revision: 2 })).state;
+  assert.equal(player.scene.portraits[1].side, "left");
 });
 
 test("portrait batches add groups without duplicates and refresh avatar images", () => {
@@ -65,6 +73,8 @@ test("portrait batches add groups without duplicates and refresh avatar images",
 
   assert.equal(state.scene.portraits.length, 2);
   assert.equal(state.scene.portraits.find((portrait) => portrait.id === "user-a").image, "a-new.webp");
+  assert.equal(state.scene.portraits.find((portrait) => portrait.id === "user-a").side, "left");
+  assert.equal(state.scene.portraits.find((portrait) => portrait.id === "npc-b").side, "right");
 });
 
 test("new scene clears composition without changing stage phase", () => {

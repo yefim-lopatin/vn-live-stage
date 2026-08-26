@@ -54,10 +54,6 @@
     </div>
     <div class="vn-director-add-grid">
       <input name="portrait-name" type="text" placeholder="Имя персонажа">
-      <select name="portrait-side" aria-label="Сторона портрета">
-        <option value="right" selected>NPC · справа</option>
-        <option value="left">Игрок · слева</option>
-      </select>
       <div class="vn-director-field-row vn-director-image-field">
         <input name="portrait-image" type="text" placeholder="Путь к портрету">
         <button type="button" data-action="browse-portrait" title="Выбрать файл"><i class="fa-solid fa-folder-open"></i></button>
@@ -72,7 +68,6 @@
             {{#if image}}<img src="{{image}}" alt="">{{else}}<div class="vn-director-avatar"><i class="fa-solid fa-user"></i></div>{{/if}}
             <div><strong>{{name}}</strong><small>{{#if isLeft}}Слева · игрок{{else}}Справа · NPC{{/if}}{{#if flipped}} · отражён{{/if}}</small></div>
             <button type="button" data-action="flip-portrait" data-portrait-id="{{id}}" data-flipped="{{flipped}}" title="Отразить по горизонтали"><i class="fa-solid fa-arrows-left-right"></i></button>
-            <button type="button" data-action="switch-side" data-portrait-id="{{id}}" data-side="{{#if isLeft}}right{{else}}left{{/if}}" title="Перенести на другую сторону"><i class="fa-solid fa-arrow-right-arrow-left"></i></button>
             <button type="button" data-action="remove-portrait" data-portrait-id="{{id}}" title="Убрать"><i class="fa-solid fa-trash"></i></button>
           </article>
         {{/each}}
