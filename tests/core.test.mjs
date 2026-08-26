@@ -11,6 +11,7 @@ import {
   overlayStructureSignature,
   shouldDisplayStage
 } from "../scripts/core.js";
+import { LiveStageSession } from "../scripts/session.js";
 
 test("scene commands change only the scene and increment revision", () => {
   const initial = createInitialState();
@@ -133,6 +134,25 @@ test("preparation is visible only to GM and live stage is visible to everyone", 
   assert.equal(shouldDisplayStage({ phase: "preparing" }, false), false);
   assert.equal(shouldDisplayStage({ phase: "preparing" }, true), true);
   assert.equal(shouldDisplayStage({ phase: "live" }, false), true);
+});
+
+test("Foundry VTT 14 socket responses expose the stage snapshot to players", async () => {
+  const originalFoundry = globalThis.foundry;
+  globalThis.foundry = {
+    helpers: {
+      SocketInterface: {
+        dispatch: async () => ({ data: { ok: true, state: { stage: { phase: "live" } } } })
+      }
+    }
+  };
+
+  try {
+    const response = await new LiveStageSession()._dispatchSocket({ kind: "sync" });
+    assert.deepEqual(response, { ok: true, state: { stage: { phase: "live" } } });
+  } finally {
+    if (originalFoundry === undefined) delete globalThis.foundry;
+    else globalThis.foundry = originalFoundry;
+  }
 });
 
 test("speech changes do not change the overlay structure signature", () => {

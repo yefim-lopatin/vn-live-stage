@@ -386,7 +386,11 @@ export class LiveStageSession {
 
   async _dispatchSocket(message) {
     const dispatch = globalThis.foundry?.helpers?.SocketInterface?.dispatch;
-    if (dispatch) return dispatch(SOCKET_NAME, message);
+    if (dispatch) {
+      const response = await dispatch(SOCKET_NAME, message);
+      if (response?.error) throw response.error;
+      return response?.data ?? response;
+    }
     return new Promise((resolve, reject) => game.socket.emit(SOCKET_NAME, message, (response) => response?.ok ? resolve(response) : reject(new Error(response?.error ?? "Socket error"))));
   }
 
