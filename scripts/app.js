@@ -7,13 +7,34 @@ import {
   shouldDisplayStage,
   speakingIds
 } from "./core.js";
-import { listLibrary, listScenes, saveLibraryRecord } from "./storage.js";
+import { deleteLibraryRecord, listLibrary, listScenes, saveLibraryRecord } from "./storage.js";
 
 const ApplicationV2 = foundry.applications.api.ApplicationV2;
 const HandlebarsApplicationMixin = foundry.applications.api.HandlebarsApplicationMixin;
 
 function notifyError(error) {
   ui.notifications?.error?.(error?.message ?? String(error));
+}
+
+async function confirmLibraryDeletion() {
+  const DialogV2 = foundry.applications.api.DialogV2;
+  if (DialogV2?.confirm) {
+    return DialogV2.confirm({
+      window: { title: "Удаление заготовки" },
+      content: "<p>Удалить выбранную заготовку без возможности восстановления?</p>",
+      yes: { label: "Удалить", icon: "<i class='fa-solid fa-trash'></i>" },
+      no: { label: "Отмена" }
+    });
+  }
+  return globalThis.confirm?.("Удалить выбранную заготовку?") ?? false;
+}
+
+async function removeLibraryRecord(session, kind, recordId) {
+  if (!await confirmLibraryDeletion()) return false;
+  await deleteLibraryRecord(kind, recordId);
+  ui.notifications?.info?.("Заготовка удалена");
+  session.refresh();
+  return true;
 }
 
 export class StageDirectorApplication extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -131,6 +152,14 @@ export class StageDirectorApplication extends HandlebarsApplicationMixin(Applica
       if (group) run(this.session.addPortraits(group.portraits ?? []));
     }));
 
+    root.querySelectorAll("[data-action='delete-scene']").forEach((button) => button.addEventListener("click", () => {
+      run(removeLibraryRecord(this.session, "scene", button.dataset.sceneId));
+    }));
+
+    root.querySelectorAll("[data-action='delete-group']").forEach((button) => button.addEventListener("click", () => {
+      run(removeLibraryRecord(this.session, "group", button.dataset.groupId));
+    }));
+
     root.querySelectorAll("[data-action='remove-portrait']").forEach((button) => button.addEventListener("click", () => {
       run(this.session.dispatch({ type: "removePortrait", payload: { portraitId: button.dataset.portraitId } }));
     }));
@@ -168,7 +197,6 @@ export class StageDirectorApplication extends HandlebarsApplicationMixin(Applica
     await this._setSceneDetails(root);
     await this.session.saveScene({ sceneId: makeId("scene"), name });
     ui.notifications?.info?.(`Сцена «${name}» добавлена в библиотеку`);
-    this._renderPreservingView();
   }
 
   async _saveGroup(root) {
@@ -183,7 +211,7 @@ export class StageDirectorApplication extends HandlebarsApplicationMixin(Applica
       createdAt: Date.now()
     });
     ui.notifications?.info?.(`Группа «${name}» сохранена`);
-    this._renderPreservingView();
+    this.session.refresh();
   }
 
   _browse(inputName) {
@@ -222,8 +250,24 @@ export class StageOverlayController {
       return;
     }
 
+    const allowPlayerJoin = Boolean(game.settings.get(MODULE_ID, "allowPlayerJoin"));
+    const quickScenes = game.user.isGM ? listScenes().map((scene) => ({
+      ...scene,
+      portraitCount: scene.portraits?.length ?? 0
+    })) : [];
+    const quickGroups = game.user.isGM ? listLibrary("group").map((group) => ({
+      ...group,
+      portraitCount: group.portraits?.length ?? 0,
+      participantNames: (group.portraits ?? []).map((portrait) => portrait.name).filter(Boolean).join(", ")
+    })) : [];
+    const librarySignature = JSON.stringify({
+      scenes: quickScenes.map((scene) => [scene.id, scene.name, scene.portraitCount]),
+      groups: quickGroups.map((group) => [group.id, group.name, group.portraitCount])
+    });
     const signature = overlayStructureSignature(state, {
-      hideUi: game.settings.get(MODULE_ID, "hideFoundryUi")
+      hideUi: game.settings.get(MODULE_ID, "hideFoundryUi"),
+      allowPlayerJoin,
+      librarySignature
     });
     if (signature === this.signature && this.element?.isConnected) {
       this._updateDynamicState(state);
@@ -249,11 +293,16 @@ export class StageOverlayController {
       backgroundVisible: Boolean(state.scene.background && state.scene.backgroundVisible),
       leftPortraits,
       rightPortraits,
-      sideColumns: Math.max(leftPortraits.length, rightPortraits.length, 1),
+      leftColumns: Math.max(leftPortraits.length, 1),
+      rightColumns: Math.max(rightPortraits.length, 1),
       isGM: Boolean(game.user.isGM),
       isPreparing: phase === "preparing",
       isLive: phase === "live",
-      isSpeaking: Boolean(state.speaking[game.user.id])
+      isSpeaking: Boolean(state.speaking[game.user.id]),
+      canJoinStage: this.session.canCurrentUserJoin(),
+      quickScenes,
+      quickGroups,
+      hasQuickLibrary: quickScenes.length > 0 || quickGroups.length > 0
     };
 
     const token = ++this.renderToken;
@@ -282,6 +331,9 @@ export class StageOverlayController {
     if (button) this._bindHoldButton(button);
     this.element?.querySelectorAll("[data-action='portrait-speak']").forEach((portraitButton) => {
       this._bindHoldButton(portraitButton, portraitButton.dataset.portraitId);
+    });
+    this.element?.querySelector("[data-action='join-stage']")?.addEventListener("click", () => {
+      this.session.joinStage().catch(notifyError);
     });
     this.element?.querySelectorAll("[data-action='remove-portrait']").forEach((portraitButton) => {
       portraitButton.addEventListener("click", () => {
@@ -319,6 +371,21 @@ export class StageOverlayController {
       this.session.deactivateStage().catch(notifyError);
     });
     this.element?.querySelector("[data-action='open-director']")?.addEventListener("click", () => this.openDirector?.());
+    this.element?.querySelectorAll("[data-action='quick-load-scene']").forEach((button) => {
+      button.addEventListener("click", () => this.session.loadScene(button.dataset.sceneId).catch(notifyError));
+    });
+    this.element?.querySelectorAll("[data-action='quick-apply-group']").forEach((button) => {
+      button.addEventListener("click", () => {
+        const group = listLibrary("group").find((item) => item.id === button.dataset.groupId);
+        if (group) this.session.addPortraits(group.portraits ?? []).catch(notifyError);
+      });
+    });
+    this.element?.querySelectorAll("[data-action='quick-delete-scene']").forEach((button) => {
+      button.addEventListener("click", () => removeLibraryRecord(this.session, "scene", button.dataset.sceneId).catch(notifyError));
+    });
+    this.element?.querySelectorAll("[data-action='quick-delete-group']").forEach((button) => {
+      button.addEventListener("click", () => removeLibraryRecord(this.session, "group", button.dataset.groupId).catch(notifyError));
+    });
   }
 
   _bindHoldButton(button, portraitId = null) {
@@ -326,7 +393,8 @@ export class StageOverlayController {
     button?.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
       event.preventDefault();
-      this._armSpeechRelease();
+      button.setPointerCapture?.(event.pointerId);
+      this._armSpeechRelease(button, event.pointerId);
       this.session.startSpeaking(portraitId).catch((error) => {
         this._disarmSpeechRelease();
         notifyError(error);
@@ -377,23 +445,32 @@ export class StageOverlayController {
     });
   }
 
-  _armSpeechRelease() {
+  _armSpeechRelease(button = null, pointerId = null) {
     this._disarmSpeechRelease();
     this.releaseSpeech = () => {
       this._disarmSpeechRelease();
       this.session.stopSpeaking().catch(notifyError);
     };
+    this.releaseSpeechTarget = button;
+    this.releaseSpeechPointerId = pointerId;
     window.addEventListener("pointerup", this.releaseSpeech, true);
     window.addEventListener("pointercancel", this.releaseSpeech, true);
     window.addEventListener("blur", this.releaseSpeech, true);
+    button?.addEventListener("lostpointercapture", this.releaseSpeech, true);
   }
 
   _disarmSpeechRelease() {
     if (!this.releaseSpeech) return;
+    const button = this.releaseSpeechTarget;
+    const pointerId = this.releaseSpeechPointerId;
     window.removeEventListener("pointerup", this.releaseSpeech, true);
     window.removeEventListener("pointercancel", this.releaseSpeech, true);
     window.removeEventListener("blur", this.releaseSpeech, true);
+    button?.removeEventListener("lostpointercapture", this.releaseSpeech, true);
     this.releaseSpeech = null;
+    this.releaseSpeechTarget = null;
+    this.releaseSpeechPointerId = null;
+    if (pointerId != null && button?.hasPointerCapture?.(pointerId)) button.releasePointerCapture?.(pointerId);
   }
 
   unmount() {

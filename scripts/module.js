@@ -71,6 +71,15 @@ function registerSettings() {
     default: true,
     onChange: () => overlayController?.sync(session.getState())
   });
+  game.settings.register(MODULE_ID, "allowPlayerJoin", {
+    name: "VNLiveStage.settings.allowPlayerJoin.name",
+    hint: "VNLiveStage.settings.allowPlayerJoin.hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: () => overlayController?.sync(session.getState())
+  });
 }
 
 function registerKeybindings() {
@@ -135,6 +144,7 @@ function exposeApi() {
     toggle: () => session.toggleStage(),
     newScene: (name) => session.newScene(name),
     addPlayerAvatars: () => session.addPlayerAvatars(),
+    joinStage: () => session.joinStage(),
     getState: () => session?.getState() ?? null,
     dispatch: (command) => session.dispatch(command),
     startSpeaking: (portraitId) => session.startSpeaking(portraitId),

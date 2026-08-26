@@ -66,3 +66,13 @@ export function listLibrary(kind) {
   const flag = FLAGS[kind];
   return game.journal.contents.map((journal) => journal.getFlag(MODULE_ID, flag)).filter(Boolean).map(clone);
 }
+
+export async function deleteLibraryRecord(kind, recordId) {
+  if (!game.user.isGM) throw new Error("Библиотекой может управлять только GM");
+  const flag = FLAGS[kind];
+  if (!flag) throw new Error(`Неизвестный тип библиотеки: ${kind}`);
+  const entry = game.journal.contents.find((journal) => journal.getFlag(MODULE_ID, flag)?.id === recordId);
+  if (!entry) throw new Error("Заготовка не найдена");
+  await entry.delete();
+  return true;
+}

@@ -9,7 +9,8 @@ import {
   createInitialState,
   applySceneCommand,
   applyTransientCommand,
-  expireSpeaking
+  expireSpeaking,
+  canUserJoinStage
 } from "./core.js";
 import { DEFAULT_POLICY, can, normalizePolicy } from "./permissions.js";
 import { getSystemAdapter } from "./adapters.js";
@@ -63,10 +64,7 @@ export class LiveStageSession {
     });
     command.userId = game.user.id;
     if (game.user.isGM) return this._apply(command);
-    const response = await this._dispatchSocket({ kind: "command", userId: game.user.id, command });
-    if (!response?.ok) throw new Error(response?.error ?? "Команда отклонена");
-    if (response.state) this.state = clone(response.state);
-    this._emit();
+    game.socket.emit(SOCKET_NAME, { kind: "command", userId: game.user.id, command });
     return this.getState();
   }
 
@@ -151,14 +149,33 @@ export class LiveStageSession {
     return this.addPortraits(portraits);
   }
 
+  async joinStage() {
+    if (!game.settings.get(MODULE_ID, "allowPlayerJoin")) throw new Error("Самостоятельное присоединение отключено ведущим");
+    if (!game.user.character) throw new Error("Сначала назначьте пользователю персонажа");
+    if (!this.canCurrentUserJoin()) throw new Error("Персонаж уже находится на сцене или сцена не показана");
+    return this.dispatch({ type: "joinStage", payload: {} });
+  }
+
   canCurrentUserSpeak(portraitId = null) {
     return Boolean(this._portraitFor(game.user.id, portraitId));
+  }
+
+  canCurrentUserJoin() {
+    return canUserJoinStage(this.state, game.user, {
+      enabled: Boolean(game.settings.get(MODULE_ID, "allowPlayerJoin"))
+    });
+  }
+
+  refresh() {
+    this._emit();
+    return this.getState();
   }
 
   async saveScene(options = {}) {
     if (!game.user.isGM) return this.dispatch({ type: "saveScene", payload: options });
     await saveScene(this.state, options);
     ui.notifications?.info?.("Сцена сохранена");
+    this._emit();
     return this.getState();
   }
 
@@ -220,6 +237,24 @@ export class LiveStageSession {
         this.state.speaking = {};
         this.state.overflow = [];
         this._resetLocalSpeaking();
+      } else if (command.type === "joinStage") {
+        const enabled = Boolean(game.settings.get(MODULE_ID, "allowPlayerJoin"));
+        if (!enabled) throw new Error("Самостоятельное присоединение отключено ведущим");
+        if ((this.state.stage?.phase ?? "inactive") !== "live") throw new Error("Сцена сейчас не показана");
+        if (this._portraitFor(command.userId)) throw new Error("Персонаж уже находится на сцене");
+        const portrait = getSystemAdapter().getPortrait(user);
+        if (!portrait) throw new Error("У игрока нет назначенного персонажа с портретом");
+        const joinCommand = {
+          ...command,
+          type: "addPortrait",
+          revision: this.state.revision,
+          payload: { ...portrait, side: "left" }
+        };
+        const result = applySceneCommand(this.state, joinCommand);
+        this.state = result.state;
+        this.state.history.unshift(result.event);
+        this.state.history = this.state.history.slice(0, MAX_HISTORY);
+        this.state.redo = [];
       } else if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) {
         const phase = this.state.stage?.phase ?? "inactive";
         const canSpeak = phase === "live" || (phase === "preparing" && user.isGM);
@@ -263,6 +298,7 @@ export class LiveStageSession {
     if (!user) throw new Error("Неизвестный пользователь");
     const policy = normalizePolicy(game.settings.get(MODULE_ID, "permissionPolicy") ?? DEFAULT_POLICY);
     if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) return;
+    if (command.type === "joinStage" && !user.isGM && user.active !== false) return;
     if (["prepareStage", "publishStage", "returnToPreparation", "deactivateStage"].includes(command.type) && user.isGM) return;
     if (command.type === "createRequest" && user.active !== false) return;
     if (["resolveRequest"].includes(command.type) && can(user, "requestReview", policy)) return;
@@ -350,6 +386,14 @@ export class LiveStageSession {
       }
       return;
     }
+    if (message.kind === "command-error") {
+      const isTarget = message.targetUserId === game.user.id;
+      if (!game.user.isGM && isTarget) {
+        if (["speechStart", "speechHeartbeat"].includes(message.commandType)) this._resetLocalSpeaking();
+        ui.notifications?.error?.(message.error ?? "Команда отклонена");
+      }
+      return;
+    }
     if (message.kind === "sync") {
       if (game.user.isGM) await this._broadcast({ targetUserId: message.userId });
       return;
@@ -360,6 +404,12 @@ export class LiveStageSession {
       respond?.({ ok: true, state });
     } catch (error) {
       respond?.({ ok: false, error: error.message, state: this.getState() });
+      game.socket.emit(SOCKET_NAME, {
+        kind: "command-error",
+        targetUserId: message.userId,
+        commandType: message.command?.type,
+        error: error.message || "Команда отклонена"
+      });
     }
   }
 
@@ -370,12 +420,6 @@ export class LiveStageSession {
   async _syncFromStorage() {
     this.state = await readLiveState();
     if (!this._speechEnabledForCurrentUser() || !this.state.speaking?.[game.user.id]) this._resetLocalSpeaking();
-  }
-
-  async _dispatchSocket(message) {
-    const dispatch = globalThis.foundry?.helpers?.SocketInterface?.dispatch;
-    if (dispatch) return dispatch(SOCKET_NAME, message);
-    return new Promise((resolve, reject) => game.socket.emit(SOCKET_NAME, message, (response) => response?.ok ? resolve(response) : reject(new Error(response?.error ?? "Socket error"))));
   }
 
   async _broadcast({ targetUserId = null } = {}) {

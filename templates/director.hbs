@@ -91,7 +91,10 @@
             <article class="vn-director-preset">
               {{#if hasBackground}}<img src="{{background}}" alt="">{{else}}<div class="vn-director-preset-empty"><i class="fa-solid fa-image"></i></div>{{/if}}
               <div><strong>{{name}}</strong><small>{{portraitCount}} участников{{#if time}} · {{time}}{{/if}}</small></div>
-              <button type="button" data-action="load-preset" data-scene-id="{{id}}">Загрузить</button>
+              <div class="vn-director-library-actions">
+                <button type="button" data-action="load-preset" data-scene-id="{{id}}">Загрузить</button>
+                <button type="button" data-action="delete-scene" data-scene-id="{{id}}" title="Удалить сцену"><i class="fa-solid fa-trash"></i></button>
+              </div>
             </article>
           {{/each}}
         </div>
@@ -113,7 +116,10 @@
           {{#each groups}}
             <article class="vn-director-group">
               <div><strong>{{name}}</strong><small>{{portraitCount}} участников</small></div>
-              <button type="button" data-action="apply-group" data-group-id="{{id}}">Добавить в сцену</button>
+              <div class="vn-director-library-actions">
+                <button type="button" data-action="apply-group" data-group-id="{{id}}">Добавить в сцену</button>
+                <button type="button" data-action="delete-group" data-group-id="{{id}}" title="Удалить группу"><i class="fa-solid fa-trash"></i></button>
+              </div>
             </article>
           {{/each}}
         </div>

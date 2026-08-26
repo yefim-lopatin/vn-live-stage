@@ -10,6 +10,7 @@ export const COMMANDS = Object.freeze([
   "publishStage",
   "returnToPreparation",
   "deactivateStage",
+  "joinStage",
   "newScene",
   "addPortrait",
   "addPortraits",
@@ -329,7 +330,30 @@ export function shouldDisplayStage(stage, isGM = false) {
   return phase === "live" || (isGM && phase === "preparing");
 }
 
-export function overlayStructureSignature(state, { hideUi = false } = {}) {
+export function hasUserPortrait(state, userId) {
+  const profileId = `user-${userId}`;
+  return allPortraits(state).some((portrait) => (
+    portrait.sourceUserId === userId || portrait.profileId === profileId
+  ));
+}
+
+export function canUserJoinStage(state, user, { enabled = true } = {}) {
+  return Boolean(
+    enabled
+    && user
+    && !user.isGM
+    && user.active !== false
+    && user.character
+    && getStagePhase(state.stage) === "live"
+    && !hasUserPortrait(state, user.id)
+  );
+}
+
+export function overlayStructureSignature(state, {
+  hideUi = false,
+  allowPlayerJoin = false,
+  librarySignature = ""
+} = {}) {
   const scene = {
     id: state.scene.id,
     background: state.scene.background,
@@ -359,6 +383,8 @@ export function overlayStructureSignature(state, { hideUi = false } = {}) {
     scene,
     overflow,
     phase: getStagePhase(state.stage),
-    hideUi: Boolean(hideUi)
+    hideUi: Boolean(hideUi),
+    allowPlayerJoin: Boolean(allowPlayerJoin),
+    librarySignature: String(librarySignature)
   });
 }

@@ -9,11 +9,10 @@
     <small data-vn-caption-meta hidden>{{state.scene.time}}{{#if state.scene.weather}} · {{state.scene.weather}}{{/if}}</small>
   </header>
 
-  <section class="vn-cinematic-side vn-cinematic-left" style="--vn-side-columns: {{sideColumns}}" aria-label="Персонажи игроков">
+  <section class="vn-cinematic-side vn-cinematic-left" style="--vn-side-columns: {{leftColumns}}" aria-label="Персонажи игроков">
     {{#each leftPortraits}}
       <figure class="vn-cinematic-portrait {{#if speaking}}is-speaking{{/if}} {{#if flipped}}is-flipped{{/if}} {{#if overflow}}is-overflow{{/if}}" data-portrait-id="{{id}}" style="--vn-slot: {{slot}}">
         {{#if hasImage}}<img data-portrait-image src="{{image}}" alt="{{name}}">{{else}}<div class="vn-cinematic-placeholder"><i class="fa-solid fa-user"></i></div>{{/if}}
-        <figcaption data-portrait-name>{{name}}</figcaption>
         <div class="vn-cinematic-portrait-actions">
           {{#if ../isGM}}
             <button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Говорить</span></button>
@@ -23,15 +22,15 @@
             {{#if ownedByCurrentUser}}<button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-player-speak="true" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Зажать, чтобы говорить</span></button>{{/if}}
           {{/if}}
         </div>
+        <figcaption data-portrait-name>{{name}}</figcaption>
       </figure>
     {{/each}}
   </section>
 
-  <section class="vn-cinematic-side vn-cinematic-right" style="--vn-side-columns: {{sideColumns}}" aria-label="Неигровые персонажи">
+  <section class="vn-cinematic-side vn-cinematic-right" style="--vn-side-columns: {{rightColumns}}" aria-label="Неигровые персонажи">
     {{#each rightPortraits}}
       <figure class="vn-cinematic-portrait {{#if speaking}}is-speaking{{/if}} {{#if flipped}}is-flipped{{/if}} {{#if overflow}}is-overflow{{/if}}" data-portrait-id="{{id}}" style="--vn-slot: {{slot}}">
         {{#if hasImage}}<img data-portrait-image src="{{image}}" alt="{{name}}">{{else}}<div class="vn-cinematic-placeholder"><i class="fa-solid fa-user"></i></div>{{/if}}
-        <figcaption data-portrait-name>{{name}}</figcaption>
         <div class="vn-cinematic-portrait-actions">
           {{#if ../isGM}}
             <button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Говорить</span></button>
@@ -41,6 +40,7 @@
             {{#if ownedByCurrentUser}}<button type="button" class="vn-cinematic-portrait-speak" data-action="portrait-speak" data-player-speak="true" data-portrait-id="{{id}}"><i class="fa-solid fa-comment-dots"></i><span>Зажать, чтобы говорить</span></button>{{/if}}
           {{/if}}
         </div>
+        <figcaption data-portrait-name>{{name}}</figcaption>
       </figure>
     {{/each}}
   </section>
@@ -53,5 +53,43 @@
       <button type="button" data-action="open-director" title="Открыть пульт"><i class="fa-solid fa-sliders"></i><span>Пульт</span></button>
       <button type="button" data-action="end-stage" title="Завершить сцену"><i class="fa-solid fa-stop"></i><span>Завершить</span></button>
     </div>
+    {{#if hasQuickLibrary}}
+      <aside class="vn-cinematic-library" aria-label="Быстрые заготовки">
+        {{#if quickScenes.length}}
+          <section>
+            <h2><i class="fa-solid fa-clapperboard"></i> Сцены</h2>
+            <div class="vn-cinematic-library-list">
+              {{#each quickScenes}}
+                <article class="vn-cinematic-library-item">
+                  <button type="button" class="vn-cinematic-library-main" data-action="quick-load-scene" data-scene-id="{{id}}">
+                    <strong>{{name}}</strong><small>{{portraitCount}} участников</small>
+                  </button>
+                  <button type="button" class="vn-cinematic-library-delete" data-action="quick-delete-scene" data-scene-id="{{id}}" title="Удалить сцену"><i class="fa-solid fa-trash"></i></button>
+                </article>
+              {{/each}}
+            </div>
+          </section>
+        {{/if}}
+        {{#if quickGroups.length}}
+          <section>
+            <h2><i class="fa-solid fa-user-group"></i> Персонажи</h2>
+            <div class="vn-cinematic-library-list">
+              {{#each quickGroups}}
+                <article class="vn-cinematic-library-item">
+                  <button type="button" class="vn-cinematic-library-main" data-action="quick-apply-group" data-group-id="{{id}}">
+                    <strong>{{name}}</strong><small>{{#if participantNames}}{{participantNames}}{{else}}{{portraitCount}} участников{{/if}}</small>
+                  </button>
+                  <button type="button" class="vn-cinematic-library-delete" data-action="quick-delete-group" data-group-id="{{id}}" title="Удалить группу"><i class="fa-solid fa-trash"></i></button>
+                </article>
+              {{/each}}
+            </div>
+          </section>
+        {{/if}}
+      </aside>
+    {{/if}}
+  {{/if}}
+
+  {{#if canJoinStage}}
+    <button type="button" class="vn-cinematic-join" data-action="join-stage"><i class="fa-solid fa-user-plus"></i><span>Присоединиться к сцене</span></button>
   {{/if}}
 </div>
