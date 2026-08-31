@@ -667,8 +667,7 @@
   opacity: .75;
 }
 
-.vn-cinematic-speak,
-.vn-cinematic-join {
+.vn-cinematic-speak {
   position: absolute;
   left: 50%;
   bottom: .7vh;
@@ -693,23 +692,46 @@
   touch-action: none;
 }
 
-.vn-cinematic-speak:hover,
-.vn-cinematic-join:hover {
+.vn-cinematic-speak:hover {
   filter: brightness(1.13);
 }
 
-.vn-cinematic-speak:disabled,
-.vn-cinematic-join:disabled {
+.vn-cinematic-speak:disabled {
   opacity: .58;
   filter: none;
   cursor: not-allowed;
 }
 
-.vn-cinematic-speak.is-active,
-.vn-cinematic-join.is-active {
+.vn-cinematic-speak.is-active {
   border-color: #e5c487;
   background: linear-gradient(180deg, #6f4937, #4c3029);
   box-shadow: 0 8px 30px rgba(0, 0, 0, .45);
+}
+
+.vn-cinematic-leave {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(231, 135, 135, .78);
+  border-radius: 8px;
+  color: #fff7ea;
+  font-weight: 750;
+  text-shadow: 0 1px 2px #000;
+  background: rgba(73, 30, 33, .92);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .45);
+  cursor: pointer;
+}
+
+.vn-cinematic-leave:hover {
+  border-color: #ffd0d0;
+  background: rgba(112, 37, 41, .96);
 }
 
 .vn-cinematic-gm-actions {
@@ -829,11 +851,9 @@
 }
 
 body.vn-live-stage-hide-ui #ui-left,
-body.vn-live-stage-hide-ui #ui-right,
 body.vn-live-stage-hide-ui #ui-top,
 body.vn-live-stage-hide-ui #ui-bottom,
 body.vn-live-stage-hide-ui #controls,
-body.vn-live-stage-hide-ui #sidebar,
 body.vn-live-stage-hide-ui #players,
 body.vn-live-stage-hide-ui #hotbar,
 body.vn-live-stage-hide-ui #navigation,
@@ -842,6 +862,22 @@ body.vn-live-stage-hide-ui #pause,
 body.vn-live-stage-hide-ui #logo {
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+/* Оставляем штатный чат Foundry доступным поверх сцены для всех участников. */
+body.vn-live-stage-hide-ui #ui-right,
+body.vn-live-stage-hide-ui #sidebar {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  z-index: 81;
+}
+
+/* Нижняя панель нужна ведущему для запуска обычных макросов во время сцены. */
+body.vn-live-stage-hide-ui.vn-live-stage-gm-preview #ui-bottom,
+body.vn-live-stage-hide-ui.vn-live-stage-gm-preview #hotbar {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  z-index: 81;
 }
 
 @keyframes vn-background-enter {

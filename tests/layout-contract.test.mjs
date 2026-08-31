@@ -35,3 +35,12 @@ test("GM portraits have side controls and side changes are applied without repla
 test("background has a separate dimming layer", () => {
   assert.match(styles, /\.vn-cinematic-background::after\s*\{[\s\S]*?background:\s*rgba\(5, 6, 10, \.28\);/);
 });
+
+test("Foundry chat stays available and the GM keeps the macro hotbar during a scene", () => {
+  const hiddenUi = styles.match(/body\.vn-live-stage-hide-ui #ui-left,[\s\S]*?\n\}/)?.[0] ?? "";
+  assert.doesNotMatch(hiddenUi, /#ui-right|#sidebar/);
+  assert.match(styles, /body\.vn-live-stage-hide-ui #ui-right,[\s\S]*?pointer-events:\s*auto !important;/);
+  assert.match(styles, /body\.vn-live-stage-hide-ui\.vn-live-stage-gm-preview #ui-bottom,[\s\S]*?#hotbar[\s\S]*?pointer-events:\s*auto !important;/);
+  assert.match(application, /classList\.toggle\("vn-live-stage-gm-preview",\s*Boolean\(game\.user\.isGM\)\)/);
+  assert.match(application, /classList\.remove\("vn-live-stage-active",\s*"vn-live-stage-hide-ui",\s*"vn-live-stage-gm-preview"\)/);
+});

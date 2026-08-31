@@ -6,6 +6,8 @@ import { StageDirectorApplication, StageOverlayController } from "./app.js";
 let session;
 let directorApplication;
 let overlayController;
+let playerStageControlVisible = null;
+const PLAYER_JOIN_CONTROL = `${MODULE_ID}-join`;
 
 function openDirector() {
   if (!session) {
@@ -78,8 +80,35 @@ function registerSettings() {
     config: true,
     type: Boolean,
     default: true,
-    onChange: () => overlayController?.sync(session.getState())
+    onChange: () => {
+      overlayController?.sync(session.getState());
+      refreshPlayerStageControl(true);
+    }
   });
+}
+
+function refreshPlayerStageControl(force = false) {
+  if (!session || game.user.isGM) return;
+  const visible = session.canCurrentUserJoin();
+  if (!force && playerStageControlVisible === visible) return;
+  playerStageControlVisible = visible;
+  const tools = ui.controls?.controls?.tokens?.tools;
+  if (!tools) return;
+  if (visible) tools[PLAYER_JOIN_CONTROL] = createPlayerJoinControl(Object.keys(tools).length);
+  else delete tools[PLAYER_JOIN_CONTROL];
+  ui.controls.render({ force: true });
+}
+
+function createPlayerJoinControl(order) {
+  return {
+    name: PLAYER_JOIN_CONTROL,
+    order,
+    title: "VNLiveStage.controls.playerJoin.title",
+    icon: "fa-solid fa-user-plus",
+    button: true,
+    visible: true,
+    onChange: () => session.joinStage().catch((error) => ui.notifications?.error?.(error.message))
+  };
 }
 
 function registerKeybindings() {
@@ -99,7 +128,12 @@ function registerKeybindings() {
 
 function registerSceneControls() {
   Hooks.on("getSceneControlButtons", (controls) => {
-    if (!game.user.isGM || !game.settings.get(MODULE_ID, "showSceneControlButton")) return;
+    if (!game.user.isGM) {
+      if (!session?.canCurrentUserJoin()) return;
+      controls.tokens.tools[PLAYER_JOIN_CONTROL] = createPlayerJoinControl(Object.keys(controls.tokens.tools).length);
+      return;
+    }
+    if (!game.settings.get(MODULE_ID, "showSceneControlButton")) return;
     controls[MODULE_ID] = {
       name: MODULE_ID,
       order: 95,
@@ -145,6 +179,7 @@ function exposeApi() {
     newScene: (name) => session.newScene(name),
     addPlayerAvatars: () => session.addPlayerAvatars(),
     joinStage: () => session.joinStage(),
+    leaveStage: () => session.leaveStage(),
     getState: () => session?.getState() ?? null,
     dispatch: (command) => session.dispatch(command),
     startSpeaking: (portraitId) => session.startSpeaking(portraitId),
@@ -172,6 +207,8 @@ Hooks.once("init", () => {
 Hooks.once("ready", async () => {
   session = await new LiveStageSession().initialize();
   overlayController = new StageOverlayController(session, { openDirector });
+  session.onChange(() => refreshPlayerStageControl());
+  refreshPlayerStageControl(true);
   exposeApi();
   console.info(`${MODULE_ID} | готов к работе`);
 });

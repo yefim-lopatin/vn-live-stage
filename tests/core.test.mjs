@@ -8,6 +8,7 @@ import {
   createSceneDefinition,
   createInitialState,
   expireSpeaking,
+  canUserLeaveStage,
   overlayStructureSignature,
   shouldDisplayStage
 } from "../scripts/core.js";
@@ -25,6 +26,23 @@ test("scene commands change only the scene and increment revision", () => {
   assert.equal(result.state.scene.portraits[0].slot, 0);
   assert.equal(result.state.scene.portraits[0].side, "right");
   assert.equal(result.event.after.portraits.length, 1);
+});
+
+test("leaveStage removes only the leaving player portrait and stops their speech", () => {
+  const state = createInitialState();
+  state.stage = { ...state.stage, phase: "live", active: true };
+  state.scene.portraits = [
+    { id: "user-alice", profileId: "user-alice", sourceUserId: "alice", name: "Алиса", image: "alice.webp" },
+    { id: "user-bob", profileId: "user-bob", sourceUserId: "bob", name: "Боб", image: "bob.webp" }
+  ];
+  state.speaking = { alice: { portraitId: "user-alice" } };
+
+  assert.equal(canUserLeaveStage(state, { id: "alice", isGM: false }), true);
+  const result = applySceneCommand(state, createCommand("leaveStage", {}, { userId: "alice", revision: 0 }));
+
+  assert.deepEqual(result.state.scene.portraits.map((portrait) => portrait.id), ["user-bob"]);
+  assert.deepEqual(result.state.speaking, {});
+  assert.equal(canUserLeaveStage(result.state, { id: "alice", isGM: false }), false);
 });
 
 test("stage starts inactive and the director can move any portrait to either side", () => {

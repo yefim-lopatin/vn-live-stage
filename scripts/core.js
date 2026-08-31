@@ -11,6 +11,7 @@ export const COMMANDS = Object.freeze([
   "returnToPreparation",
   "deactivateStage",
   "joinStage",
+  "leaveStage",
   "newScene",
   "addPortrait",
   "addPortraits",
@@ -190,6 +191,17 @@ export function applySceneCommand(inputState, command) {
       }
       break;
     }
+    case "leaveStage": {
+      const profileId = `user-${command.userId}`;
+      const belongsToUser = (portrait) => portrait.sourceUserId === command.userId || portrait.profileId === profileId;
+      state.scene.portraits = state.scene.portraits.filter((portrait) => !belongsToUser(portrait));
+      state.overflow = state.overflow.filter((portrait) => !belongsToUser(portrait));
+      if (state.scene.portraits.length === before.scene.portraits.length && state.overflow.length === before.overflow.length) {
+        throw new Error("Ваш персонаж не находится на сцене");
+      }
+      delete state.speaking[command.userId];
+      break;
+    }
     case "movePortrait": {
       const portrait = requirePortrait(state.scene, payload.portraitId);
       if (!Number.isInteger(payload.slot) || payload.slot < 0 || payload.slot >= MAX_SLOTS) throw new Error("Некорректный слот");
@@ -342,6 +354,15 @@ export function canUserJoinStage(state, user, { enabled = true } = {}) {
     && user.character
     && getStagePhase(state.stage) === "live"
     && !hasUserPortrait(state, user.id)
+  );
+}
+
+export function canUserLeaveStage(state, user) {
+  return Boolean(
+    user
+    && !user.isGM
+    && getStagePhase(state.stage) === "live"
+    && hasUserPortrait(state, user.id)
   );
 }
 

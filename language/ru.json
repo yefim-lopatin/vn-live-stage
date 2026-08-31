@@ -40,6 +40,9 @@
       "stage": {
         "title": "VN Live Stage"
       },
+      "playerJoin": {
+        "title": "Присоединиться к сцене"
+      },
       "director": {
         "title": "Открыть пульт сцены"
       },

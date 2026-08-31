@@ -300,6 +300,7 @@ export class StageOverlayController {
       isLive: phase === "live",
       isSpeaking: Boolean(state.speaking[game.user.id]),
       canJoinStage: this.session.canCurrentUserJoin(),
+      canLeaveStage: this.session.canCurrentUserLeave(),
       quickScenes,
       quickGroups,
       hasQuickLibrary: quickScenes.length > 0 || quickGroups.length > 0
@@ -322,6 +323,7 @@ export class StageOverlayController {
     this.element = next;
     document.body.classList.add("vn-live-stage-active");
     document.body.classList.toggle("vn-live-stage-hide-ui", Boolean(game.settings.get(MODULE_ID, "hideFoundryUi")));
+    document.body.classList.toggle("vn-live-stage-gm-preview", Boolean(game.user.isGM));
     this._bind();
     this._updateDynamicState(this.session.getState());
   }
@@ -332,8 +334,8 @@ export class StageOverlayController {
     this.element?.querySelectorAll("[data-action='portrait-speak']").forEach((portraitButton) => {
       this._bindHoldButton(portraitButton, portraitButton.dataset.portraitId);
     });
-    this.element?.querySelector("[data-action='join-stage']")?.addEventListener("click", () => {
-      this.session.joinStage().catch(notifyError);
+    this.element?.querySelector("[data-action='leave-stage']")?.addEventListener("click", () => {
+      this.session.leaveStage().catch(notifyError);
     });
     this.element?.querySelectorAll("[data-action='remove-portrait']").forEach((portraitButton) => {
       portraitButton.addEventListener("click", () => {
@@ -519,7 +521,7 @@ export class StageOverlayController {
     this._disarmSpeechRelease();
     this.element?.remove();
     this.element = null;
-    document.body.classList.remove("vn-live-stage-active", "vn-live-stage-hide-ui");
+    document.body.classList.remove("vn-live-stage-active", "vn-live-stage-hide-ui", "vn-live-stage-gm-preview");
   }
 
   destroy() {

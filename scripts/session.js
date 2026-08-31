@@ -10,7 +10,8 @@ import {
   applySceneCommand,
   applyTransientCommand,
   expireSpeaking,
-  canUserJoinStage
+  canUserJoinStage,
+  canUserLeaveStage
 } from "./core.js";
 import { DEFAULT_POLICY, can, normalizePolicy } from "./permissions.js";
 import { getSystemAdapter } from "./adapters.js";
@@ -156,6 +157,12 @@ export class LiveStageSession {
     return this.dispatch({ type: "joinStage", payload: {} });
   }
 
+  async leaveStage() {
+    if (!this.canCurrentUserLeave()) throw new Error("Ваш персонаж не находится на показанной сцене");
+    if (this.speaking) await this.stopSpeaking();
+    return this.dispatch({ type: "leaveStage", payload: {} });
+  }
+
   canCurrentUserSpeak(portraitId = null) {
     return Boolean(this._portraitFor(game.user.id, portraitId));
   }
@@ -164,6 +171,10 @@ export class LiveStageSession {
     return canUserJoinStage(this.state, game.user, {
       enabled: Boolean(game.settings.get(MODULE_ID, "allowPlayerJoin"))
     });
+  }
+
+  canCurrentUserLeave() {
+    return canUserLeaveStage(this.state, game.user);
   }
 
   refresh() {
@@ -255,6 +266,14 @@ export class LiveStageSession {
         this.state.history.unshift(result.event);
         this.state.history = this.state.history.slice(0, MAX_HISTORY);
         this.state.redo = [];
+      } else if (command.type === "leaveStage") {
+        if ((this.state.stage?.phase ?? "inactive") !== "live") throw new Error("Сцена сейчас не показана");
+        const result = applySceneCommand(this.state, command);
+        this.state = result.state;
+        this.state.history.unshift(result.event);
+        this.state.history = this.state.history.slice(0, MAX_HISTORY);
+        this.state.redo = [];
+        this._resetLocalSpeaking();
       } else if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) {
         const phase = this.state.stage?.phase ?? "inactive";
         const canSpeak = phase === "live" || (phase === "preparing" && user.isGM);
@@ -298,7 +317,7 @@ export class LiveStageSession {
     if (!user) throw new Error("Неизвестный пользователь");
     const policy = normalizePolicy(game.settings.get(MODULE_ID, "permissionPolicy") ?? DEFAULT_POLICY);
     if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) return;
-    if (command.type === "joinStage" && !user.isGM && user.active !== false) return;
+    if (["joinStage", "leaveStage"].includes(command.type) && !user.isGM && user.active !== false) return;
     if (["prepareStage", "publishStage", "returnToPreparation", "deactivateStage"].includes(command.type) && user.isGM) return;
     if (command.type === "createRequest" && user.active !== false) return;
     if (["resolveRequest"].includes(command.type) && can(user, "requestReview", policy)) return;
