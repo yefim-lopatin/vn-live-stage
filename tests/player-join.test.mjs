@@ -21,16 +21,16 @@ const player = {
 const overlayTemplate = readFileSync(new URL("../templates/overlay.hbs", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../scripts/app.js", import.meta.url), "utf8");
 
-test("player with an assigned character can join a live stage", () => {
+test("player opens a live stage before joining the dialogue", () => {
   assert.equal(canUserJoinStage(liveState(), player, { enabled: true }), true);
   assert.equal(canUserLeaveStage(liveState(), player), false);
-  assert.match(appSource, /canJoinStage:\s*this\.session\.canCurrentUserJoin\(\)/);
+  assert.match(appSource, /openForCurrentUser\(\)/);
+  assert.match(appSource, /closeForCurrentUser\(\)/);
   const moduleSource = readFileSync(new URL("../scripts/module.js", import.meta.url), "utf8");
-  assert.match(moduleSource, /controls\.tokens\.tools\[PLAYER_JOIN_CONTROL\]/);
+  assert.match(moduleSource, /controls\[MODULE_ID\]\s*=\s*createPlayerStageControl\(\)/);
   assert.match(moduleSource, /button:\s*true/);
-  assert.match(moduleSource, /title:\s*"VNLiveStage\.controls\.playerJoin\.title"/);
-  assert.match(moduleSource, /session\.joinStage\(\)\.catch/);
-  assert.doesNotMatch(overlayTemplate, /data-action="join-stage"/);
+  assert.match(moduleSource, /title:\s*"VNLiveStage\.controls\.playerOpen\.title"/);
+  assert.match(overlayTemplate, /\{\{#if canJoinStage\}\}[\s\S]*?data-action="join-stage"/);
   assert.match(overlayTemplate, /\{\{#if canLeaveStage\}\}[\s\S]*?data-action="leave-stage"/);
   assert.match(appSource, /canLeaveStage:\s*this\.session\.canCurrentUserLeave\(\)/);
 });

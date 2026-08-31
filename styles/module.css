@@ -494,24 +494,24 @@
   top: 10vh;
   bottom: 10vh;
   z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(var(--vn-side-columns, 1), minmax(0, 1fr));
+  display: flex;
   align-items: flex-end;
-  gap: clamp(2px, .4vw, 7px);
+  gap: 0;
   width: 48.5vw;
-  padding: 0 .6vw;
+  padding: 0;
   pointer-events: none;
 }
 
 .vn-cinematic-left {
   left: 0;
-  justify-items: start;
+  flex-direction: row-reverse;
+  justify-content: flex-start;
 }
 
 .vn-cinematic-right {
   right: 0;
-  direction: rtl;
-  justify-items: start;
+  direction: ltr;
+  justify-content: flex-start;
 }
 
 .vn-cinematic-right .vn-cinematic-portrait {
@@ -520,13 +520,19 @@
 
 .vn-cinematic-portrait {
   position: relative;
-  width: 100%;
-  max-width: 430px;
-  min-width: 0;
+  z-index: calc(100 - var(--vn-slot));
+  flex: 0 0 min(30vw, 430px);
+  width: min(30vw, 430px);
+  max-width: none;
+  min-width: min(30vw, 430px);
   height: 80vh;
-  margin: 0;
+  margin: 0 0 0 clamp(-12rem, -15vw, -5rem);
   transform-origin: center bottom;
   animation: vn-portrait-enter .42s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.vn-cinematic-portrait:first-child {
+  margin-left: 0;
 }
 
 .vn-cinematic-portrait img {
@@ -734,10 +740,35 @@
   background: rgba(112, 37, 41, .96);
 }
 
+.vn-cinematic-player-join {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid rgba(229, 193, 128, .72);
+  border-radius: 7px;
+  color: #fff7ea;
+  font-weight: 750;
+  text-shadow: 0 1px 2px #000;
+  background: rgba(49, 38, 26, .94);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .42);
+  cursor: pointer;
+}
+
+.vn-cinematic-player-join:hover {
+  border-color: #ffe2a7;
+  background: rgba(82, 64, 40, .98);
+}
+
 .vn-cinematic-gm-actions {
   position: absolute;
   top: .8vh;
-  right: 24px;
+  left: 24px;
   z-index: 6;
   display: flex;
   gap: 7px;
@@ -766,7 +797,7 @@
 .vn-cinematic-library {
   position: absolute;
   top: 4.7rem;
-  right: 18px;
+  left: 18px;
   z-index: 7;
   display: grid;
   gap: 12px;
@@ -876,6 +907,7 @@ body.vn-live-stage-hide-ui #sidebar {
 body.vn-live-stage-hide-ui.vn-live-stage-gm-preview #ui-bottom,
 body.vn-live-stage-hide-ui.vn-live-stage-gm-preview #hotbar {
   opacity: 1 !important;
+  visibility: visible !important;
   pointer-events: auto !important;
   z-index: 81;
 }
@@ -902,7 +934,7 @@ body.vn-live-stage-hide-ui.vn-live-stage-gm-preview #hotbar {
   .vn-cinematic-portrait-speak span { display: none; }
   .vn-cinematic-portrait-actions { width: min(94%, 180px); }
   .vn-cinematic-gm-actions span { display: none; }
-  .vn-cinematic-library { right: 6px; width: min(240px, 48vw); }
+  .vn-cinematic-library { left: 6px; width: min(240px, 48vw); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -91,6 +91,12 @@
     {{/if}}
   {{/if}}
 
+  {{#unless isGM}}
+    {{#if canJoinStage}}
+      <button type="button" class="vn-cinematic-player-join" data-action="join-stage" title="Добавить своего персонажа к диалогу"><i class="fa-solid fa-user-plus"></i><span>Присоединиться к диалогу</span></button>
+    {{/if}}
+  {{/unless}}
+
   {{#if canLeaveStage}}
     <button type="button" class="vn-cinematic-leave" data-action="leave-stage" title="Убрать своего персонажа со сцены"><i class="fa-solid fa-right-from-bracket"></i><span>Выйти из диалога</span></button>
   {{/if}}

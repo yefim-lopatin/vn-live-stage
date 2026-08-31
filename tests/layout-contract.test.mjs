@@ -6,13 +6,13 @@ const template = readFileSync(new URL("../templates/overlay.hbs", import.meta.ur
 const styles = readFileSync(new URL("../styles/module.css", import.meta.url), "utf8");
 const application = readFileSync(new URL("../scripts/app.js", import.meta.url), "utf8");
 
-test("left and right portrait grids use the same automatic column count", () => {
+test("portrait stacks start at the centre and overlap without gaps", () => {
   assert.equal((template.match(/--vn-side-columns: \{\{sideColumns\}\}/g) ?? []).length, 2);
-  assert.doesNotMatch(template, /\{\{leftColumns\}\}|\{\{rightColumns\}\}/);
-  assert.match(styles, /\.vn-cinematic-left\s*\{[\s\S]*?left:\s*0;/);
-  assert.match(styles, /\.vn-cinematic-right\s*\{[\s\S]*?right:\s*0;[\s\S]*?direction:\s*rtl;[\s\S]*?justify-items:\s*start;/);
+  assert.match(styles, /\.vn-cinematic-side\s*\{[\s\S]*?display:\s*flex;[\s\S]*?gap:\s*0;/);
+  assert.match(styles, /\.vn-cinematic-left\s*\{[\s\S]*?flex-direction:\s*row-reverse;/);
+  assert.match(styles, /\.vn-cinematic-portrait\s*\{[\s\S]*?z-index:\s*calc\(100 - var\(--vn-slot\)\);[\s\S]*?margin:\s*0 0 0 clamp\(-12rem, -15vw, -5rem\);/);
+  assert.match(styles, /\.vn-cinematic-portrait:first-child\s*\{[\s\S]*?margin-left:\s*0;/);
   assert.match(styles, /\.vn-cinematic-right \.vn-cinematic-portrait\s*\{[\s\S]*?direction:\s*ltr;/);
-  assert.match(application, /sideColumns:\s*Math\.max\(leftPortraits\.length,\s*rightPortraits\.length,\s*1\)/);
 });
 
 test("portrait names are rendered and positioned below the controls", () => {

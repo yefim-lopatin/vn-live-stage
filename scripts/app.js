@@ -4,7 +4,7 @@ import {
   getStagePhase,
   makeId,
   overlayStructureSignature,
-  shouldDisplayStage,
+  shouldDisplayStageForUser,
   speakingIds
 } from "./core.js";
 import { deleteLibraryRecord, listLibrary, listScenes, saveLibraryRecord } from "./storage.js";
@@ -232,9 +232,11 @@ export class StageDirectorApplication extends HandlebarsApplicationMixin(Applica
 }
 
 export class StageOverlayController {
-  constructor(session, { openDirector } = {}) {
+  constructor(session, { openDirector, onPlayerStageChange } = {}) {
     this.session = session;
     this.openDirector = openDirector;
+    this.onPlayerStageChange = onPlayerStageChange;
+    this.playerStageOpen = Boolean(game.user.isGM);
     this.element = null;
     this.signature = null;
     this.renderToken = 0;
@@ -242,9 +244,33 @@ export class StageOverlayController {
     this.sync(session.getState());
   }
 
+  isOpenForCurrentUser() {
+    return Boolean(game.user.isGM || this.playerStageOpen);
+  }
+
+  async openForCurrentUser() {
+    if (!game.user.isGM && getStagePhase(this.session.getState().stage) !== "live") {
+      throw new Error("Сцена сейчас не показана");
+    }
+    this.playerStageOpen = true;
+    this.onPlayerStageChange?.();
+    return this.sync(this.session.getState());
+  }
+
+  async closeForCurrentUser() {
+    if (game.user.isGM) return this.sync(this.session.getState());
+    this.playerStageOpen = false;
+    this.onPlayerStageChange?.();
+    return this.sync(this.session.getState());
+  }
+
   async sync(state) {
     const phase = getStagePhase(state.stage);
-    const shouldShow = shouldDisplayStage(state.stage, game.user.isGM);
+    if (!game.user.isGM && phase !== "live") this.playerStageOpen = false;
+    const shouldShow = shouldDisplayStageForUser(state.stage, {
+      isGM: game.user.isGM,
+      playerStageOpen: this.playerStageOpen
+    });
     if (!shouldShow) {
       this.unmount();
       return;
@@ -312,7 +338,10 @@ export class StageOverlayController {
       context
     );
     const currentState = this.session.getState();
-    const stillVisible = shouldDisplayStage(currentState.stage, game.user.isGM);
+    const stillVisible = shouldDisplayStageForUser(currentState.stage, {
+      isGM: game.user.isGM,
+      playerStageOpen: this.playerStageOpen
+    });
     if (token !== this.renderToken || !stillVisible) return;
     const holder = document.createElement("div");
     holder.innerHTML = html.trim();
@@ -334,8 +363,11 @@ export class StageOverlayController {
     this.element?.querySelectorAll("[data-action='portrait-speak']").forEach((portraitButton) => {
       this._bindHoldButton(portraitButton, portraitButton.dataset.portraitId);
     });
+    this.element?.querySelector("[data-action='join-stage']")?.addEventListener("click", () => {
+      this.session.joinStage().catch(notifyError);
+    });
     this.element?.querySelector("[data-action='leave-stage']")?.addEventListener("click", () => {
-      this.session.leaveStage().catch(notifyError);
+      this.session.leaveStage().then(() => this.closeForCurrentUser()).catch(notifyError);
     });
     this.element?.querySelectorAll("[data-action='remove-portrait']").forEach((portraitButton) => {
       portraitButton.addEventListener("click", () => {

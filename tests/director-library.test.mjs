@@ -7,11 +7,12 @@ const overlay = readFileSync(new URL("../templates/overlay.hbs", import.meta.url
 const director = readFileSync(new URL("../templates/director.hbs", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../styles/module.css", import.meta.url), "utf8");
 
-test("GM overlay contains a right-side quick library for scenes and participant groups", () => {
+test("GM overlay contains a left-side quick library for scenes and participant groups", () => {
   assert.match(overlay, /class="vn-cinematic-library"/);
   assert.match(overlay, /data-action="quick-load-scene"/);
   assert.match(overlay, /data-action="quick-apply-group"/);
-  assert.match(styles, /\.vn-cinematic-library\s*\{[\s\S]*?right:\s*18px;/);
+  assert.match(styles, /\.vn-cinematic-library\s*\{[\s\S]*?left:\s*18px;/);
+  assert.doesNotMatch(styles, /\.vn-cinematic-library\s*\{\s*right:\s*6px;/);
   assert.match(styles, /\.vn-cinematic-library-list\s*\{[\s\S]*?display:\s*grid;/);
 });
 

@@ -7,7 +7,6 @@ let session;
 let directorApplication;
 let overlayController;
 let playerStageControlVisible = null;
-const PLAYER_JOIN_CONTROL = `${MODULE_ID}-join`;
 
 function openDirector() {
   if (!session) {
@@ -89,25 +88,32 @@ function registerSettings() {
 
 function refreshPlayerStageControl(force = false) {
   if (!session || game.user.isGM) return;
-  const visible = session.canCurrentUserJoin();
+  const visible = (session.getState().stage?.phase ?? "inactive") === "live" && !overlayController?.isOpenForCurrentUser();
   if (!force && playerStageControlVisible === visible) return;
   playerStageControlVisible = visible;
-  const tools = ui.controls?.controls?.tokens?.tools;
-  if (!tools) return;
-  if (visible) tools[PLAYER_JOIN_CONTROL] = createPlayerJoinControl(Object.keys(tools).length);
-  else delete tools[PLAYER_JOIN_CONTROL];
+  const controls = ui.controls?.controls;
+  if (!controls) return;
+  if (visible) controls[MODULE_ID] = createPlayerStageControl();
+  else delete controls[MODULE_ID];
   ui.controls.render({ force: true });
 }
 
-function createPlayerJoinControl(order) {
+function createPlayerStageControl() {
   return {
-    name: PLAYER_JOIN_CONTROL,
-    order,
-    title: "VNLiveStage.controls.playerJoin.title",
-    icon: "fa-solid fa-user-plus",
-    button: true,
-    visible: true,
-    onChange: () => session.joinStage().catch((error) => ui.notifications?.error?.(error.message))
+    name: MODULE_ID,
+    order: 95,
+    title: "VNLiveStage.controls.stage.title",
+    icon: "fa-solid fa-masks-theater",
+    tools: {
+      openStage: {
+        name: "openStage",
+        order: 0,
+        title: "VNLiveStage.controls.playerOpen.title",
+        icon: "fa-solid fa-door-open",
+        button: true,
+        onChange: () => overlayController?.openForCurrentUser().catch((error) => ui.notifications?.error?.(error.message))
+      }
+    }
   };
 }
 
@@ -129,8 +135,8 @@ function registerKeybindings() {
 function registerSceneControls() {
   Hooks.on("getSceneControlButtons", (controls) => {
     if (!game.user.isGM) {
-      if (!session?.canCurrentUserJoin()) return;
-      controls.tokens.tools[PLAYER_JOIN_CONTROL] = createPlayerJoinControl(Object.keys(controls.tokens.tools).length);
+      if ((session?.getState().stage?.phase ?? "inactive") !== "live" || overlayController?.isOpenForCurrentUser()) return;
+      controls[MODULE_ID] = createPlayerStageControl();
       return;
     }
     if (!game.settings.get(MODULE_ID, "showSceneControlButton")) return;
@@ -206,7 +212,10 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", async () => {
   session = await new LiveStageSession().initialize();
-  overlayController = new StageOverlayController(session, { openDirector });
+  overlayController = new StageOverlayController(session, {
+    openDirector,
+    onPlayerStageChange: () => refreshPlayerStageControl(true)
+  });
   session.onChange(() => refreshPlayerStageControl());
   refreshPlayerStageControl(true);
   exposeApi();

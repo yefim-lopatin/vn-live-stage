@@ -338,6 +338,10 @@ export function shouldDisplayStage(stage, isGM = false) {
   return phase === "live" || (isGM && phase === "preparing");
 }
 
+export function shouldDisplayStageForUser(stage, { isGM = false, playerStageOpen = false } = {}) {
+  return shouldDisplayStage(stage, isGM) && (isGM || playerStageOpen);
+}
+
 export function hasUserPortrait(state, userId) {
   const profileId = `user-${userId}`;
   return allPortraits(state).some((portrait) => (

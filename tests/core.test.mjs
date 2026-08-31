@@ -10,7 +10,8 @@ import {
   expireSpeaking,
   canUserLeaveStage,
   overlayStructureSignature,
-  shouldDisplayStage
+  shouldDisplayStage,
+  shouldDisplayStageForUser
 } from "../scripts/core.js";
 
 test("scene commands change only the scene and increment revision", () => {
@@ -156,6 +157,12 @@ test("preparation is visible only to GM and live stage is visible to everyone", 
   assert.equal(shouldDisplayStage({ phase: "preparing" }, false), false);
   assert.equal(shouldDisplayStage({ phase: "preparing" }, true), true);
   assert.equal(shouldDisplayStage({ phase: "live" }, false), true);
+});
+
+test("players open the live stage locally and close it again after leaving", () => {
+  assert.equal(shouldDisplayStageForUser({ phase: "live" }, { isGM: false, playerStageOpen: false }), false);
+  assert.equal(shouldDisplayStageForUser({ phase: "live" }, { isGM: false, playerStageOpen: true }), true);
+  assert.equal(shouldDisplayStageForUser({ phase: "preparing" }, { isGM: true }), true);
 });
 
 test("speech changes do not change the overlay structure signature", () => {
