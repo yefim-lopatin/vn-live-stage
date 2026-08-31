@@ -7,6 +7,7 @@ import {
   shouldDisplayStageForUser,
   speakingIds
 } from "./core.js";
+import { stageRollPresentation } from "./checks.js";
 import { deleteLibraryRecord, listLibrary, listScenes, saveLibraryRecord } from "./storage.js";
 
 const ApplicationV2 = foundry.applications.api.ApplicationV2;
@@ -232,14 +233,18 @@ export class StageDirectorApplication extends HandlebarsApplicationMixin(Applica
 }
 
 export class StageOverlayController {
-  constructor(session, { openDirector, onPlayerStageChange } = {}) {
+  constructor(session, { openDirector, onPlayerStageChange, onStageCheckTriggered } = {}) {
     this.session = session;
     this.openDirector = openDirector;
     this.onPlayerStageChange = onPlayerStageChange;
+    this.onStageCheckTriggered = onStageCheckTriggered;
     this.playerStageOpen = Boolean(game.user.isGM);
     this.element = null;
     this.signature = null;
     this.renderToken = 0;
+    this.seenCheckResults = new Set();
+    this.hasInitialCheckSnapshot = false;
+    this.rollReveal = null;
     this.unsubscribe = session.onChange((state) => this.sync(state));
     this.sync(session.getState());
   }
@@ -297,6 +302,7 @@ export class StageOverlayController {
     });
     if (signature === this.signature && this.element?.isConnected) {
       this._updateDynamicState(state);
+      this._showNewCheckResults(state);
       return;
     }
     this.signature = signature;
@@ -327,6 +333,8 @@ export class StageOverlayController {
       isSpeaking: Boolean(state.speaking[game.user.id]),
       canJoinStage: this.session.canCurrentUserJoin(),
       canLeaveStage: this.session.canCurrentUserLeave(),
+      stageChecks: state.stageChecks ?? [],
+      hasStageChecks: (state.stageChecks?.length ?? 0) > 0,
       quickScenes,
       quickGroups,
       hasQuickLibrary: quickScenes.length > 0 || quickGroups.length > 0
@@ -355,6 +363,7 @@ export class StageOverlayController {
     document.body.classList.toggle("vn-live-stage-gm-preview", Boolean(game.user.isGM));
     this._bind();
     this._updateDynamicState(this.session.getState());
+    this._showNewCheckResults(this.session.getState());
   }
 
   _bind() {
@@ -368,6 +377,12 @@ export class StageOverlayController {
     });
     this.element?.querySelector("[data-action='leave-stage']")?.addEventListener("click", () => {
       this.session.leaveStage().then(() => this.closeForCurrentUser()).catch(notifyError);
+    });
+    this.element?.querySelectorAll("[data-action='run-stage-check']").forEach((button) => {
+      button.addEventListener("click", () => {
+        const check = this.session.getState().stageChecks?.find((item) => item.id === button.dataset.checkId);
+        if (check) this._runStageCheck(check).catch(notifyError);
+      });
     });
     this.element?.querySelectorAll("[data-action='remove-portrait']").forEach((portraitButton) => {
       portraitButton.addEventListener("click", () => {
@@ -519,8 +534,85 @@ export class StageOverlayController {
     });
   }
 
+  async _runStageCheck(check) {
+    const Editor = globalThis.TextEditor ?? foundry.applications?.ux?.TextEditor;
+    if (!Editor?.enrichHTML) throw new Error("Foundry не смог подготовить проверку PF2e");
+    const sourceMessage = game.messages?.get(check.messageId);
+    const html = await Editor.enrichHTML(check.formula, { async: true, relativeTo: sourceMessage });
+    const holder = document.createElement("div");
+    holder.dataset.messageId = check.messageId;
+    holder.innerHTML = html;
+    const link = holder.querySelector("a[data-pf2-check]");
+    if (!link) throw new Error("Не удалось открыть проверку PF2e");
+    document.body.append(holder);
+    this.onStageCheckTriggered?.(check);
+    link.click();
+    holder.remove();
+  }
+
+  _showNewCheckResults(state) {
+    const resultIds = (state.stageChecks ?? []).flatMap((check) => check.results ?? []).map((result) => result.messageId);
+    if (!this.hasInitialCheckSnapshot) {
+      resultIds.forEach((id) => this.seenCheckResults.add(id));
+      this.hasInitialCheckSnapshot = true;
+      return;
+    }
+    for (const messageId of resultIds) {
+      if (this.seenCheckResults.has(messageId)) continue;
+      this.seenCheckResults.add(messageId);
+      this._showRollReveal(messageId);
+    }
+  }
+
+  _showRollReveal(messageId) {
+    const message = game.messages?.get(messageId);
+    if (!message) return;
+    const actor = message.speaker?.actor ? game.actors?.get(message.speaker.actor) : null;
+    const result = stageRollPresentation(message, actor);
+    this.rollReveal?.remove();
+    const reveal = document.createElement("section");
+    reveal.className = "vn-stage-roll-reveal";
+    reveal.innerHTML = `
+      <div class="vn-stage-roll-reveal-backdrop"></div>
+      <article class="vn-stage-roll-reveal-card" role="dialog" aria-modal="true" aria-label="Результат проверки">
+        <button type="button" class="vn-stage-roll-reveal-close" aria-label="Закрыть"><i class="fa-solid fa-xmark"></i></button>
+        <header class="vn-stage-roll-reveal-banner"><span data-stage-roll-label></span></header>
+        <div class="vn-stage-roll-reveal-body">
+          <img data-stage-roll-image alt="">
+          <div class="vn-stage-roll-reveal-result">
+            <span class="vn-stage-roll-reveal-actor" data-stage-roll-actor></span>
+            <span class="vn-stage-roll-reveal-die" data-stage-roll-die></span>
+            <strong class="vn-stage-roll-reveal-total" data-stage-roll-total></strong>
+            <span class="vn-stage-roll-reveal-outcome" data-stage-roll-outcome></span>
+          </div>
+        </div>
+      </article>`;
+    reveal.querySelector("[data-stage-roll-label]").textContent = result.label;
+    reveal.querySelector("[data-stage-roll-actor]").textContent = result.actorName;
+    reveal.querySelector("[data-stage-roll-die]").textContent = `d20: ${result.die}`;
+    reveal.querySelector("[data-stage-roll-total]").textContent = result.total;
+    const outcome = reveal.querySelector("[data-stage-roll-outcome]");
+    outcome.textContent = result.outcomeLabel;
+    outcome.classList.add(`is-${result.outcomeClass}`);
+    const image = reveal.querySelector("[data-stage-roll-image]");
+    if (result.actorImage) {
+      image.src = result.actorImage;
+      image.alt = result.actorName;
+    } else image.remove();
+    const close = () => {
+      reveal.remove();
+      if (this.rollReveal === reveal) this.rollReveal = null;
+    };
+    reveal.querySelector(".vn-stage-roll-reveal-close").addEventListener("click", close);
+    reveal.querySelector(".vn-stage-roll-reveal-backdrop").addEventListener("click", close);
+    document.body.append(reveal);
+    this.rollReveal = reveal;
+  }
+
   _armSpeechRelease(button = null, pointerId = null) {
     this._disarmSpeechRelease();
+    this.rollReveal?.remove();
+    this.rollReveal = null;
     this.releaseSpeech = () => {
       this._disarmSpeechRelease();
       this.session.stopSpeaking().catch(notifyError);

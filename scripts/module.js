@@ -1,4 +1,5 @@
 import { MODULE_ID, clone } from "./core.js";
+import { parseStageChecks } from "./checks.js";
 import { DEFAULT_POLICY } from "./permissions.js";
 import { LiveStageSession } from "./session.js";
 import { StageDirectorApplication, StageOverlayController } from "./app.js";
@@ -7,6 +8,7 @@ let session;
 let directorApplication;
 let overlayController;
 let playerStageControlVisible = null;
+let pendingStageCheckId = null;
 
 function openDirector() {
   if (!session) {
@@ -170,6 +172,28 @@ function registerSceneControls() {
   });
 }
 
+function registerPf2eStageChecks() {
+  Hooks.on("createChatMessage", (message) => {
+    if (!session || game.system.id !== "pf2e") return;
+    const phase = session.getState().stage?.phase ?? "inactive";
+    if (phase !== "live") return;
+    const isAuthor = message.author?.id === game.user.id;
+    if (game.user.isGM && game.users.activeGM === game.user && isAuthor && String(message.content ?? "").includes("@Check[")) {
+      const checks = parseStageChecks(message.content, { messageId: message.id, createdAt: message.timestamp });
+      if (checks.length) {
+        session.dispatch({ type: "createStageChecks", payload: { checks } }).catch((error) => ui.notifications?.error?.(error.message));
+      }
+    }
+    if (!pendingStageCheckId || !isAuthor || !message.rolls?.length) return;
+    const checkId = pendingStageCheckId;
+    pendingStageCheckId = null;
+    session.dispatch({
+      type: "recordStageCheckResult",
+      payload: { checkId, messageId: message.id }
+    }).catch((error) => ui.notifications?.error?.(error.message));
+  });
+}
+
 function exposeApi() {
   const module = game.modules.get(MODULE_ID);
   module.api = {
@@ -214,9 +238,11 @@ Hooks.once("ready", async () => {
   session = await new LiveStageSession().initialize();
   overlayController = new StageOverlayController(session, {
     openDirector,
-    onPlayerStageChange: () => refreshPlayerStageControl(true)
+    onPlayerStageChange: () => refreshPlayerStageControl(true),
+    onStageCheckTriggered: (check) => { pendingStageCheckId = check.id; }
   });
   session.onChange(() => refreshPlayerStageControl());
+  registerPf2eStageChecks();
   refreshPlayerStageControl(true);
   exposeApi();
   console.info(`${MODULE_ID} | готов к работе`);

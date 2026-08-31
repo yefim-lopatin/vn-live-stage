@@ -46,6 +46,26 @@ test("leaveStage removes only the leaving player portrait and stops their speech
   assert.equal(canUserLeaveStage(result.state, { id: "alice", isGM: false }), false);
 });
 
+test("stage checks keep their PF2e result message ids in shared state", () => {
+  let state = createInitialState();
+  state.stage = { ...state.stage, phase: "live", active: true };
+  state = applySceneCommand(state, createCommand("createStageChecks", {
+    checks: [{
+      id: "check-athletics",
+      messageId: "prompt-message",
+      formula: "@Check[athletics|dc:18]",
+      label: "Атлетика · СЛ 18"
+    }]
+  }, { userId: "gm", revision: 0 })).state;
+  state = applySceneCommand(state, createCommand("recordStageCheckResult", {
+    checkId: "check-athletics",
+    messageId: "roll-message"
+  }, { userId: "alice", revision: 1 })).state;
+
+  assert.equal(state.stageChecks.length, 1);
+  assert.equal(state.stageChecks[0].results[0].messageId, "roll-message");
+});
+
 test("stage starts inactive and the director can move any portrait to either side", () => {
   const initial = createInitialState();
   assert.equal(initial.stage.phase, "inactive");

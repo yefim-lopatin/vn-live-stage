@@ -47,6 +47,18 @@
     {{/each}}
   </section>
 
+  {{#if hasStageChecks}}
+    <aside class="vn-stage-checks" aria-label="Проверки сцены">
+      {{#each stageChecks}}
+        <button type="button" class="vn-stage-check" data-action="run-stage-check" data-check-id="{{id}}">
+          <i class="fa-solid fa-dice-d20"></i>
+          <span>Проверка</span>
+          <strong>{{label}}</strong>
+        </button>
+      {{/each}}
+    </aside>
+  {{/if}}
+
   {{#if isGM}}
     <div class="vn-cinematic-gm-actions">
       {{#if isPreparing}}<button type="button" data-action="publish-stage" title="Показать сцену игрокам"><i class="fa-solid fa-tower-broadcast"></i><span>Показать игрокам</span></button>{{/if}}

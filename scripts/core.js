@@ -2,6 +2,7 @@ export const MODULE_ID = "vn-live-stage";
 export const SOCKET_NAME = `module.${MODULE_ID}`;
 export const MAX_HISTORY = 100;
 export const MAX_REQUESTS = 100;
+export const MAX_STAGE_CHECKS = 20;
 export const MAX_SLOTS = 6;
 export const SPEECH_TIMEOUT_MS = 9000;
 
@@ -23,6 +24,8 @@ export const COMMANDS = Object.freeze([
   "setBackground",
   "setBackgroundVisibility",
   "setEnvironment",
+  "createStageChecks",
+  "recordStageCheckResult",
   "createRequest",
   "resolveRequest",
   "saveScene",
@@ -93,6 +96,7 @@ export function createInitialState() {
     },
     scene: createSceneDefinition(),
     overflow: [],
+    stageChecks: [],
     speaking: {},
     requests: [],
     connectedUsers: [],
@@ -129,8 +133,18 @@ function sceneEvent(command, before, after) {
     revision: after.revision,
     before: clone(before.scene),
     after: clone(after.scene),
-    beforeState: { scene: clone(before.scene), requests: clone(before.requests), overflow: clone(before.overflow) },
-    afterState: { scene: clone(after.scene), requests: clone(after.requests), overflow: clone(after.overflow) },
+    beforeState: {
+      scene: clone(before.scene),
+      requests: clone(before.requests),
+      overflow: clone(before.overflow),
+      stageChecks: clone(before.stageChecks)
+    },
+    afterState: {
+      scene: clone(after.scene),
+      requests: clone(after.requests),
+      overflow: clone(after.overflow),
+      stageChecks: clone(after.stageChecks)
+    },
     createdAt: now()
   };
 }
@@ -145,6 +159,7 @@ export function applySceneCommand(inputState, command) {
       state.scene = createSceneDefinition({ name: payload.name || "Новая сцена" });
       state.overflow = [];
       state.speaking = {};
+      state.stageChecks = [];
       break;
     case "addPortrait": {
       if (state.scene.portraits.length >= MAX_SLOTS) throw new Error("Все основные слоты заняты");
@@ -239,6 +254,38 @@ export function applySceneCommand(inputState, command) {
       state.scene.time = String(payload.time ?? state.scene.time ?? "");
       state.scene.weather = String(payload.weather ?? state.scene.weather ?? "");
       break;
+    case "createStageChecks": {
+      const checks = Array.isArray(payload.checks) ? payload.checks : [];
+      for (const check of checks) {
+        const formula = String(check?.formula ?? "").trim();
+        if (!formula.startsWith("@Check[")) continue;
+        if (state.stageChecks.some((item) => item.id === check.id)) continue;
+        state.stageChecks.push({
+          id: check.id ?? makeId("stage-check"),
+          messageId: String(check.messageId ?? ""),
+          formula,
+          label: String(check.label ?? "Проверка"),
+          createdAt: Number(check.createdAt) || now(),
+          results: []
+        });
+      }
+      state.stageChecks = state.stageChecks.slice(-MAX_STAGE_CHECKS);
+      break;
+    }
+    case "recordStageCheckResult": {
+      const check = state.stageChecks.find((item) => item.id === payload.checkId);
+      if (!check) throw new Error("Проверка сцены не найдена");
+      const messageId = String(payload.messageId ?? "");
+      if (!messageId) throw new Error("Не указан результат проверки");
+      if (!check.results.some((result) => result.messageId === messageId)) {
+        check.results.push({
+          messageId,
+          userId: command.userId ?? null,
+          createdAt: now()
+        });
+      }
+      break;
+    }
     case "resolveRequest": {
       const request = state.requests.find((item) => item.id === payload.requestId);
       if (!request) throw new Error("Заявка не найдена");
@@ -402,6 +449,13 @@ export function overlayStructureSignature(state, {
     phase: getStagePhase(state.stage),
     hideUi: Boolean(hideUi),
     allowPlayerJoin: Boolean(allowPlayerJoin),
+    stageChecks: (state.stageChecks ?? []).map((check) => ({
+      id: check.id,
+      messageId: check.messageId,
+      formula: check.formula,
+      label: check.label,
+      results: (check.results ?? []).map((result) => result.messageId)
+    })),
     librarySignature: String(librarySignature)
   });
 }

@@ -6,13 +6,21 @@ const template = readFileSync(new URL("../templates/overlay.hbs", import.meta.ur
 const styles = readFileSync(new URL("../styles/module.css", import.meta.url), "utf8");
 const application = readFileSync(new URL("../scripts/app.js", import.meta.url), "utf8");
 
-test("portrait stacks start at the centre and overlap without gaps", () => {
+test("portrait stacks cling to their own edges and overlap without gaps", () => {
   assert.equal((template.match(/--vn-side-columns: \{\{sideColumns\}\}/g) ?? []).length, 2);
   assert.match(styles, /\.vn-cinematic-side\s*\{[\s\S]*?display:\s*flex;[\s\S]*?gap:\s*0;/);
-  assert.match(styles, /\.vn-cinematic-left\s*\{[\s\S]*?flex-direction:\s*row-reverse;/);
-  assert.match(styles, /\.vn-cinematic-portrait\s*\{[\s\S]*?z-index:\s*calc\(100 - var\(--vn-slot\)\);[\s\S]*?margin:\s*0 0 0 clamp\(-12rem, -15vw, -5rem\);/);
-  assert.match(styles, /\.vn-cinematic-portrait:first-child\s*\{[\s\S]*?margin-left:\s*0;/);
-  assert.match(styles, /\.vn-cinematic-right \.vn-cinematic-portrait\s*\{[\s\S]*?direction:\s*ltr;/);
+  assert.match(styles, /\.vn-cinematic-left\s*\{[\s\S]*?left:\s*0;[\s\S]*?justify-content:\s*flex-start;/);
+  assert.match(styles, /\.vn-cinematic-right\s*\{[\s\S]*?right:\s*0;[\s\S]*?flex-direction:\s*row-reverse;/);
+  assert.match(styles, /\.vn-cinematic-left \.vn-cinematic-portrait \+ \.vn-cinematic-portrait\s*\{[\s\S]*?margin-left:\s*clamp\(-30px, -2vw, -12px\);/);
+  assert.match(styles, /\.vn-cinematic-right \.vn-cinematic-portrait \+ \.vn-cinematic-portrait\s*\{[\s\S]*?margin-right:\s*clamp\(-30px, -2vw, -12px\);/);
+  assert.match(styles, /\.vn-cinematic-portrait\s*\{[\s\S]*?width:\s*clamp\(130px, 16vw, 260px\);[\s\S]*?height:\s*100%;/);
+});
+
+test("stage checks are rendered as buttons and can launch a PF2e check", () => {
+  assert.match(template, /data-action="run-stage-check"/);
+  assert.match(application, /_runStageCheck\(check\)/);
+  assert.match(application, /Editor\.enrichHTML/);
+  assert.match(application, /vn-stage-roll-reveal/);
 });
 
 test("portrait names are rendered and positioned below the controls", () => {

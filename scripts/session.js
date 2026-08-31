@@ -247,6 +247,7 @@ export class LiveStageSession {
         };
         this.state.speaking = {};
         this.state.overflow = [];
+        this.state.stageChecks = [];
         this._resetLocalSpeaking();
       } else if (command.type === "joinStage") {
         const enabled = Boolean(game.settings.get(MODULE_ID, "allowPlayerJoin"));
@@ -274,6 +275,17 @@ export class LiveStageSession {
         this.state.history = this.state.history.slice(0, MAX_HISTORY);
         this.state.redo = [];
         this._resetLocalSpeaking();
+      } else if (command.type === "recordStageCheckResult") {
+        if ((this.state.stage?.phase ?? "inactive") !== "live") throw new Error("Сцена сейчас не показана");
+        const message = game.messages?.get(command.payload?.messageId);
+        if (!message?.rolls?.length || message.author?.id !== command.userId) {
+          throw new Error("Результат проверки не подтверждён");
+        }
+        const result = applySceneCommand(this.state, command);
+        this.state = result.state;
+        this.state.history.unshift(result.event);
+        this.state.history = this.state.history.slice(0, MAX_HISTORY);
+        this.state.redo = [];
       } else if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) {
         const phase = this.state.stage?.phase ?? "inactive";
         const canSpeak = phase === "live" || (phase === "preparing" && user.isGM);
@@ -288,6 +300,7 @@ export class LiveStageSession {
         if (!scene) throw new Error("Сохранённая сцена не найдена");
         this.state.scene = createSceneDefinition(scene);
         this.state.speaking = {};
+        this.state.stageChecks = [];
         this.state.revision += 1;
         this.state.history = [];
         this.state.redo = [];
@@ -318,13 +331,14 @@ export class LiveStageSession {
     const policy = normalizePolicy(game.settings.get(MODULE_ID, "permissionPolicy") ?? DEFAULT_POLICY);
     if (["speechStart", "speechStop", "speechHeartbeat"].includes(command.type)) return;
     if (["joinStage", "leaveStage"].includes(command.type) && !user.isGM && user.active !== false) return;
+    if (command.type === "recordStageCheckResult" && user.active !== false) return;
     if (["prepareStage", "publishStage", "returnToPreparation", "deactivateStage"].includes(command.type) && user.isGM) return;
     if (command.type === "createRequest" && user.active !== false) return;
     if (["resolveRequest"].includes(command.type) && can(user, "requestReview", policy)) return;
     if (["saveScene"].includes(command.type) && can(user, "saveScene", policy)) return;
     if (["undo", "redo"].includes(command.type) && can(user, "undo", policy)) return;
     if (["loadScene"].includes(command.type) && can(user, "sceneControl", policy)) return;
-    if (["newScene", "addPortrait", "addPortraits", "removePortrait", "movePortrait", "updatePortrait", "setSceneDetails", "setLocation", "setBackground", "setBackgroundVisibility", "setEnvironment"].includes(command.type) && can(user, "sceneControl", policy)) return;
+    if (["newScene", "addPortrait", "addPortraits", "removePortrait", "movePortrait", "updatePortrait", "setSceneDetails", "setLocation", "setBackground", "setBackgroundVisibility", "setEnvironment", "createStageChecks"].includes(command.type) && can(user, "sceneControl", policy)) return;
     throw new Error("Недостаточно прав для этой команды");
   }
 
@@ -378,6 +392,7 @@ export class LiveStageSession {
     if (event.beforeState) {
       this.state.requests = clone(event.beforeState.requests);
       this.state.overflow = clone(event.beforeState.overflow);
+      this.state.stageChecks = clone(event.beforeState.stageChecks ?? []);
     }
     this.state.revision += 1;
   }
@@ -390,6 +405,7 @@ export class LiveStageSession {
     if (event.afterState) {
       this.state.requests = clone(event.afterState.requests);
       this.state.overflow = clone(event.afterState.overflow);
+      this.state.stageChecks = clone(event.afterState.stageChecks ?? []);
     }
     this.state.revision += 1;
   }
