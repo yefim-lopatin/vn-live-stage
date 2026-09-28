@@ -1,13 +1,13 @@
 # VN Live Stage
 
-Независимый модуль для Foundry VTT 14.367, предназначенный для живого визуального ведения диалоговых сцен.
+Независимый модуль для Foundry VTT 14.368, предназначенный для живого визуального ведения диалоговых сцен.
 
 ## Установка в Foundry VTT
 
 В разделе **Add-on Modules → Install Module** вставьте ссылку:
 
 ```text
-https://raw.githubusercontent.com/yefim-lopatin/vn-live-stage/main/module.json
+https://github.com/yefim-lopatin/vn-live-stage/releases/latest/download/module.json
 ```
 
 После установки активируйте `VN Live Stage` в настройках нужного мира.
